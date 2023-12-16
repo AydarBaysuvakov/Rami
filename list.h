@@ -33,6 +33,7 @@ Error_t MyListCtor(List* list, LIST_DEFN_ARGS);
 Error_t ListDtor(List *list);
 
 Error_t ListInsert(Node* node, const int type, Data_t data);
+Error_t ListExtract(Node* node);
 
 State_t ListVerify(const List* list);
 

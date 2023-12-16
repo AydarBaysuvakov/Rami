@@ -89,6 +89,12 @@ Error_t PreorderNode(const Node* node, FILE* file)
         case VARIABLE:
             fprintf(file, "3 %d ", node->data.var);
             break;
+        case FUNCTION:
+            fprintf(file, "4 %d ", node->data.func);
+            break;
+        case PUNCTUATION:
+            fprintf(file, "5 %d ", node->data.punc);
+            break;
         }
     PreorderNode(node->left, file);
     PreorderNode(node->right, file);
@@ -119,6 +125,12 @@ Error_t PostorderNode(const Node* node, FILE* file)
         case VARIABLE:
             fprintf(file, "3 %d ", node->data.var);
             break;
+        case FUNCTION:
+            fprintf(file, "4 %d ", node->data.func);
+            break;
+        case PUNCTUATION:
+            fprintf(file, "5 %d ", node->data.punc);
+            break;
         }
     fprintf(file, ") ");
 
@@ -146,6 +158,12 @@ Error_t InorderNode(const Node* node, FILE* file)
             break;
         case VARIABLE:
             fprintf(file, "3 %d ", node->data.var);
+            break;
+        case FUNCTION:
+            fprintf(file, "4 %d ", node->data.func);
+            break;
+        case PUNCTUATION:
+            fprintf(file, "5 %d ", node->data.punc);
             break;
         }
     InorderNode(node->right, file);
@@ -307,8 +325,8 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
         return Ok;
         }
     else if (node->type == VALUE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"%f\"];\n", node, node->data.val);
-    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"x\"];\n", node);
-    else
+    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"%d\"];\n", node, node->data.var);
+    else if (node->type == OPERATION)
         {
         switch (node->data.oper)
             {

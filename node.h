@@ -8,7 +8,18 @@ enum Type
     VALUE        = 1,
     OPERATION    = 2,
     VARIABLE     = 3,
-    FUNCTION     = 4
+    FUNCTION     = 4,
+    PUNCTUATION  = 5
+    };
+
+enum Punctuation
+    {
+    NULL_TERMINATOR  = 0,
+    OPEN_BRACKET     = 1,
+    CLOSE_BRACKET    = 2,
+    OPEN_BRACE       = 3,
+    CLOSE_BRACE      = 4,
+    COLON            = 5
     };
 
 enum Operation
@@ -25,16 +36,13 @@ enum Operation
     OP_SUB              = 102,
     OP_MUL              = 103,
     OP_DIV              = 104,
-    OP_PREFIX_ADD       = 105,
-    OP_POSTFIX_ADD      = 106,
-    OP_PREFIX_SUB       = 107,
-    OP_POSTFIX_SUB      = 108,
-    OP_POW              = 109,
+    OP_POW              = 105,
     OP_IF               = 201,
     OP_WHILE            = 202,
     OP_AND              = 203,
     OP_OR               = 204,
     OP_NOT              = 205,
+    OP_ELSE             = 206,
     OP_SIN              = 301,
     OP_COS              = 302,
     OP_FLOOR            = 303,
@@ -51,8 +59,10 @@ enum Operation
 union Data_t
     {
     double   val;
-    unsigned oper;
-    unsigned var;
+    int      oper;
+    int      var;
+    int      func;
+    int      punc;
     };
 
 struct Node

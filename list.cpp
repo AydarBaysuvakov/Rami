@@ -20,7 +20,19 @@ Error_t MyListCtor(List* list,
     {
     assert(list != NULL);
 
-    list->head = nullptr;
+    list->head = (Node*) calloc(1, sizeof(Node));
+    if (!list->head)
+        {
+        printf("Error: cannot allocate memory\n");
+        return AllocationError;
+        }
+
+    list->head->type         = VALUE;
+    list->head->data.val    = 0;
+
+    list->head->left   = nullptr;
+    list->head->right  = nullptr;
+
     list->size = 0;
 
     list->name = name;
@@ -74,13 +86,31 @@ Error_t ListInsert(Node* node, const int type, const Data_t data)
         case OPERATION:
             new_node->data.oper = data.oper;
             break;
+        case FUNCTION:
+            new_node->data.func = data.func;
+            break;
+        case PUNCTUATION:
+            new_node->data.punc = data.punc;
+            break;
         }
 
     new_node->left   = node;
     new_node->right  = node->right;
 
-    node->right->left = new_node;
-    node->left        = new_node;
+    if (node->right) node->right->left = new_node;
+    node->right                        = new_node;
+
+    return Ok;
+    }
+
+Error_t ListExtract(Node* node)
+    {
+    assert(node);
+
+    if (node->right) node->right->left = node->left;
+    if (node->left ) node->left->right = node->right;
+
+    free(node);
 
     return Ok;
     }
@@ -173,7 +203,13 @@ Error_t ListDumpMessage(const List *list,
                 fprintf(list->logfile, "\t\tVARIABLE: %d\n", node->data.var);
                 break;
             case OPERATION:
-                fprintf(list->logfile, "\t\tOPERATIOn: %d\n", node->data.oper);
+                fprintf(list->logfile, "\t\tOPERATION: %d\n", node->data.oper);
+                break;
+            case FUNCTION:
+                fprintf(list->logfile, "\t\tFUNCTION: %d\n", node->data.func);
+                break;
+            case PUNCTUATION:
+                fprintf(list->logfile, "\t\tPUNCTUATION: %d\n", node->data.punc);
                 break;
             }
         node = node->right;
@@ -252,12 +288,16 @@ Error_t ListNodeDump(const Node *node, FILE *fp)
         fprintf(fp,  "\t\t\"0\" [shape=oval, height = 1, label = \"nil\"];\n");
         return Ok;
         }
-    else if (node->type == VALUE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"%f\"];\n", node, node->data.val);
-    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"x\"];\n", node);
-    else
+    else if (node->type == VALUE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VALUE: %f\"];\n", node, node->data.val);
+    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VARIABLE %d\"];\n", node, node->data.var);
+    else if (node->type == FUNCTION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"FUNCTIOn %d\"];\n", node, node->data.func);
+    else if (node->type == PUNCTUATION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"PUNCTUATION %d\"];\n", node, node->data.punc);
+    else if (node->type == OPERATION)
         {
         switch (node->data.oper)
             {
+            case OP_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"=\"];\n", node); break;
+            case OP_EQUAL:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"==\"];\n", node); break;
             case OP_ADD:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+\"];\n", node); break;
             case OP_SUB:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-\"];\n", node); break;
             case OP_MUL:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*\"];\n", node); break;
