@@ -17,7 +17,7 @@ Error_t NewNode(Node** node, const int type, const Data_t data)
     Node* new_node = (Node*) calloc(1, sizeof(Node));
     if (!new_node)
         {
-        printf("Error: cannot allocate memory\n");
+        printf("Error: cannot allocate memory for new node\n");
         return AllocationError;
         }
 

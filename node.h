@@ -19,7 +19,9 @@ enum Punctuation
     CLOSE_BRACKET    = 2,
     OPEN_BRACE       = 3,
     CLOSE_BRACE      = 4,
-    COLON            = 5
+    COMMA            = 5,
+    COLON            = 6,
+    PROGRAM_START    = 7
     };
 
 enum Operation

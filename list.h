@@ -34,6 +34,7 @@ Error_t ListDtor(List *list);
 
 Error_t ListInsert(Node* node, const int type, Data_t data);
 Error_t ListExtract(Node* node);
+Error_t DestroyListNode(Node* node);
 
 State_t ListVerify(const List* list);
 

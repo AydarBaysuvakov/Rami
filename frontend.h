@@ -3,7 +3,7 @@
 
 const int DEFAULT_NAME_COUNT = 16;
 const int REALLOC_COEFFICENT = 2;
-const int KEY_WORDS_COUNT    = 40;
+const int KEY_WORDS_COUNT    = 36;
 
 struct Object
     {
@@ -66,7 +66,8 @@ static const KeyWord KEY_WORDS[KEY_WORDS_COUNT] =
     {PUNCTUATION, CLOSE_BRACKET, ")"},
     {PUNCTUATION, OPEN_BRACE, "{"},
     {PUNCTUATION, CLOSE_BRACE, "}"},
-    {PUNCTUATION, COLON, ":"}
+    {PUNCTUATION, COLON, ":"},
+    {PUNCTUATION, COMMA, ","}
     };
 
 Error_t Frontend(const char* filename);
@@ -76,22 +77,22 @@ Error_t CompilerDtor(Compiler* cmp);
 
 Error_t TokenParsing(Compiler* cmp);
 
-int GetGrammar(Compiler* cmp);
-int GetOperation(Compiler* cmp);
-int GetIf(Compiler* cmp);
-int GetElse(Compiler* cmp);
-int GetWhile(Compiler* cmp);
-int GetAssume(Compiler* cmp);
-int GetBody(Compiler* cmp);
-int GetExpression2(Compiler* cmp);
-int GetExpression1(Compiler* cmp);
-int GetExpression0(Compiler* cmp);
-int GetTerm(Compiler* cmp);
-int GetPriority(Compiler* cmp);
-int GetObject(Compiler* cmp);
-int GetParametr(Compiler* cmp);
-int GetFunction(Compiler* cmp);
-int GetVariable(Compiler* cmp);
-int GetNumber(Compiler* cmp);
+Error_t GetGrammar(Compiler* cmp);
+Error_t GetOperation(Node** node, List* tokens);
+Error_t GetIf(Node** node, List* tokens);
+Error_t GetElse(Node** node, List* tokens);
+Error_t GetWhile(Node** node, List* tokens);
+Error_t GetAssigment(Node** node, List* tokens);
+Error_t GetBody(Node** node, List* tokens);
+Error_t GetExpression2(Node** node, List* tokens);
+Error_t GetExpression1(Node** node, List* tokens);
+Error_t GetExpression0(Node** node, List* tokens);
+Error_t GetTerm(Node** node, List* tokens);
+Error_t GetPriority(Node** node, List* tokens);
+Error_t GetObject(Node** node, List* tokens);
+Error_t GetParametr(Node** node, List* tokens);
+Error_t GetFunction(Node** node, List* tokens);
+Error_t GetVariable(Node** node, List* tokens);
+Error_t GetNumber(Node** node, List* tokens);
 
 #endif //FRONTEND_H

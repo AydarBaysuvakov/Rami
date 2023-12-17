@@ -1,0 +1,57 @@
+digraph MyTree
+{
+	bgcolor = darkgreen;
+	graph [splines = splines];
+	node  [width = 2, style = filled, color = wheat];
+	edge  [color = darkgreen, fontsize = 15];
+
+	subgraph cluster0
+    {
+		bgcolor = yellowgreen;		height  = 20		style   = filled;
+		label   = "Tree[0x7ffdab7f58b0] called like '&cmp.tree' from frontend.cpp(50) Frontend()";
+
+		"0x562372f23eb0" [shape=oval, height = 1, label = ";"];
+		"0x562372f23eb0" -> "0x562372f23e20" [color = red];
+		"0x562372f23e20" [shape=oval, height = 1, label = "="];
+		"0x562372f23e20" -> "0x562372f23e50" [color = red];
+		"0x562372f23e50" [shape=oval, height = 1, label = "VARIABLE 0"];
+		"0x562372f23e20" -> "0x562372f23e80" [color = cyan];
+		"0x562372f23e80" [shape=oval, height = 1, label = "VALUE: 53.000000"];
+		"0x562372f23eb0" -> "0x562372f24210" [color = cyan];
+		"0x562372f24210" [shape=oval, height = 1, label = ";"];
+		"0x562372f24210" -> "0x562372f24120" [color = red];
+		"0x562372f24120" [shape=oval, height = 1, label = "else"];
+		"0x562372f24120" -> "0x562372f23ee0" [color = red];
+		"0x562372f23ee0" [shape=oval, height = 1, label = "if"];
+		"0x562372f23ee0" -> "0x562372f23f40" [color = red];
+		"0x562372f23f40" [shape=oval, height = 1, label = "=="];
+		"0x562372f23f40" -> "0x562372f23f10" [color = red];
+		"0x562372f23f10" [shape=oval, height = 1, label = "VARIABLE 0"];
+		"0x562372f23f40" -> "0x562372f23f70" [color = cyan];
+		"0x562372f23f70" [shape=oval, height = 1, label = "VALUE: 34.000000"];
+		"0x562372f23ee0" -> "0x562372f24030" [color = cyan];
+		"0x562372f24030" [shape=oval, height = 1, label = ";"];
+		"0x562372f24030" -> "0x562372f23fa0" [color = red];
+		"0x562372f23fa0" [shape=oval, height = 1, label = "="];
+		"0x562372f23fa0" -> "0x562372f23fd0" [color = red];
+		"0x562372f23fd0" [shape=oval, height = 1, label = "VARIABLE 1"];
+		"0x562372f23fa0" -> "0x562372f24000" [color = cyan];
+		"0x562372f24000" [shape=oval, height = 1, label = "VARIABLE 0"];
+		"0x562372f24030" -> "0x562372f240f0" [color = cyan];
+		"0x562372f240f0" [shape=oval, height = 1, label = ";"];
+		"0x562372f240f0" -> "0x562372f24060" [color = red];
+		"0x562372f24060" [shape=oval, height = 1, label = "="];
+		"0x562372f24060" -> "0x562372f24090" [color = red];
+		"0x562372f24090" [shape=oval, height = 1, label = "VARIABLE 2"];
+		"0x562372f24060" -> "0x562372f240c0" [color = cyan];
+		"0x562372f240c0" [shape=oval, height = 1, label = "VARIABLE 1"];
+		"0x562372f24120" -> "0x562372f241e0" [color = cyan];
+		"0x562372f241e0" [shape=oval, height = 1, label = ";"];
+		"0x562372f241e0" -> "0x562372f24150" [color = red];
+		"0x562372f24150" [shape=oval, height = 1, label = "="];
+		"0x562372f24150" -> "0x562372f24180" [color = red];
+		"0x562372f24180" [shape=oval, height = 1, label = "VARIABLE 2"];
+		"0x562372f24150" -> "0x562372f241b0" [color = cyan];
+		"0x562372f241b0" [shape=oval, height = 1, label = "VARIABLE 1"];
+	}
+}

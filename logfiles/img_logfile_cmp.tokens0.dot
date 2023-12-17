@@ -1,0 +1,16 @@
+digraph MyList
+{
+	rankdir = LR;
+	bgcolor = darkgreen;
+	graph [splines = splines];
+	node  [width = 2, style = filled, color = wheat];
+	edge  [color = darkgreen, fontsize = 15];
+
+	subgraph cluster0
+    {
+		bgcolor = yellowgreen;		height  = 20		style   = filled;
+		label   = "List[0x7ffdab7f5870] called like '&cmp.tokens' from frontend.cpp(49) Frontend()";
+
+		"0x562372f23df0" [shape=oval, height = 1, label = "END"];
+	}
+}
