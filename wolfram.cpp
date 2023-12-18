@@ -6,7 +6,6 @@
 #include "errors.h"
 #include "node.h"
 #include "tree.h"
-#include "stack.h"
 #include "wolfram.h"
 
 static bool IsEqual(double a, double b);

@@ -20,7 +20,8 @@ enum Error_t
     NodeExist             = 12,
     NodeNotExist          = 13,
     CopyError             = 14,
-    DifferentiationError  = 15
+    DifferentiationError  = 15,
+    NotAssigment          = 16
     };
 
 #endif //ERROR_H

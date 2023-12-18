@@ -3,7 +3,7 @@
 
 const int DEFAULT_NAME_COUNT = 16;
 const int REALLOC_COEFFICENT = 2;
-const int KEY_WORDS_COUNT    = 36;
+const int KEY_WORDS_COUNT    = 43;
 
 struct Object
     {
@@ -67,13 +67,22 @@ static const KeyWord KEY_WORDS[KEY_WORDS_COUNT] =
     {PUNCTUATION, OPEN_BRACE, "{"},
     {PUNCTUATION, CLOSE_BRACE, "}"},
     {PUNCTUATION, COLON, ":"},
-    {PUNCTUATION, COMMA, ","}
+    {PUNCTUATION, COMMA, ","},
+    {OPERATION, OP_SIN, "cos"},
+    {OPERATION, OP_COS, "sin"},
+    {OPERATION, OP_SQRT, "тамыр"},
+    {OPERATION, OP_LOG, "log"},
+    {OPERATION, OP_EXP, "exp"},
+    {OPERATION, OP_INPUT, "индерергә"},
+    {OPERATION, OP_OUTPUT, "яҙырға"},
     };
 
-Error_t Frontend(const char* filename);
+Error_t Frontend(const char* file_from, const char* file_to);
 
 Error_t CompilerCtor(Compiler* cmp, const char* filename);
 Error_t CompilerDtor(Compiler* cmp);
+
+Error_t WriteTree(Compiler* cmp, const char* filename);
 
 Error_t TokenParsing(Compiler* cmp);
 
@@ -88,6 +97,7 @@ Error_t GetExpression2(Node** node, List* tokens);
 Error_t GetExpression1(Node** node, List* tokens);
 Error_t GetExpression0(Node** node, List* tokens);
 Error_t GetTerm(Node** node, List* tokens);
+Error_t GetUnary(Node** node, List* tokens);
 Error_t GetPriority(Node** node, List* tokens);
 Error_t GetObject(Node** node, List* tokens);
 Error_t GetParametr(Node** node, List* tokens);

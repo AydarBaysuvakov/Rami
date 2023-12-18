@@ -5,8 +5,8 @@ typedef int Type_t;
 
 enum Type
     {
-    VALUE        = 1,
-    OPERATION    = 2,
+    OPERATION    = 1,
+    VALUE        = 2,
     VARIABLE     = 3,
     FUNCTION     = 4,
     PUNCTUATION  = 5
@@ -52,6 +52,8 @@ enum Operation
     OP_SQRT             = 305,
     OP_LOG              = 306,
     OP_EXP              = 307,
+    OP_INPUT            = 351,
+    OP_OUTPUT           = 352,
     OP_BREAK            = 401,
     OP_CONTINUE         = 402,
     OP_RETURN           = 403,

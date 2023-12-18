@@ -119,7 +119,7 @@ Error_t DestroyListNode(Node* node)
     {
     assert(node != NULL);
 
-    if (node->right) DestroyListNode(node->right);
+    if (node->left) DestroyListNode(node->left);
 
     free(node);
 

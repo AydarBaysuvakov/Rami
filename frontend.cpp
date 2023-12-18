@@ -20,12 +20,39 @@ static void ReadOperation(Compiler* cmp, Node* node);
 static int  IsLetter(char* str, int pos);
 static int  IsNumber(char* str, int pos);
 
-Error_t Frontend(const char* filename)
+static const char DEFAULT_TREE_FILENAME[] = "tree.txt";
+
+int main(int argc, char *argv[])
     {
-    assert(filename);
+    const char* file_from = nullptr;
+    const char* file_to   = DEFAULT_TREE_FILENAME;
+
+    if (argc < 2)
+        {
+        printf("Incorrect args number\n");
+        return FileError;
+        }
+    else if (argc == 2)
+        {
+        file_from = argv[1];
+        }
+    else if (argc > 2)
+        {
+        file_from = argv[1];
+        file_to   = argv[2];
+        }
+
+    Frontend(file_from, file_to);
+    return 0;
+    }
+
+Error_t Frontend(const char* file_from, const char* file_to)
+    {
+    assert(file_from);
+    assert(file_to);
 
     Compiler cmp = {};
-    CompilerCtor(&cmp, filename);
+    CompilerCtor(&cmp, file_from);
     if (cmp.error)
         {
         return cmp.error;
@@ -38,16 +65,22 @@ Error_t Frontend(const char* filename)
         return cmp.error;
         }
 
+    ListDump(&cmp.tokens, 0);
 
     if (GetGrammar(&cmp) != Ok)
         {
-        printf("Syntax Error\n");
         CompilerDtor(&cmp);
         return SyntaxError;
         }
 
-    ListDump(&cmp.tokens, 0);
     TreeDump(&cmp.tree, 0);
+
+    WriteTree(&cmp, file_to);
+    if (cmp.error)
+        {
+        CompilerDtor(&cmp);
+        return cmp.error;
+        }
 
     CompilerDtor(&cmp);
     return Ok;
@@ -142,6 +175,26 @@ Error_t CompilerDtor(Compiler* cmp)
 
     ListDtor(&cmp->tokens);
     TreeDtor(&cmp->tree);
+
+    return Ok;
+    }
+
+Error_t WriteTree(Compiler* cmp, const char* filename)
+    {
+    assert(cmp);
+    assert(filename);
+
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL)
+        {
+        perror("Cannot open file\n");
+        cmp->error = FileError;
+        return FileError;
+        }
+
+    PreorderNode(cmp->tree.root, fp);
+
+    fclose(fp);
 
     return Ok;
     }
@@ -388,6 +441,7 @@ Error_t GetGrammar(Compiler* cmp)
             }
         }
 
+    printf("Grammar error\n");
     return SyntaxError;
     }
 
@@ -396,16 +450,13 @@ Error_t GetOperation(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == NULL_TERMINATOR)
-        {
-        return Ok;
-        }
-    if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACE)
+    if  (tokens->head->type == PUNCTUATION &&
+        (tokens->head->data.punc == NULL_TERMINATOR || tokens->head->data.punc == CLOSE_BRACE))
         {
         return Ok;
         }
 
-    Error_t response = SyntaxError;
+    Error_t response = Ok;
     if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_IF)
         {
         response = GetIf(node, tokens);
@@ -421,13 +472,13 @@ Error_t GetOperation(Node** node, List* tokens)
     else
         {
         response = GetAssigment(node, tokens);
-        if (response != Ok)
+        if (response == NotAssigment)
             {
             response = GetExpression2(node, tokens);
             }
         }
 
-    if (response) return SyntaxError;
+    if (response != Ok) return SyntaxError;
 
     if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NEXT)
         {
@@ -443,6 +494,7 @@ Error_t GetOperation(Node** node, List* tokens)
         return SyntaxError;
         }
 
+    printf("Operation error (Missed ';')\n");
     return SyntaxError;
     }
 
@@ -481,6 +533,7 @@ Error_t GetIf(Node** node, List* tokens)
             }
         }
 
+    printf("If error\n");
     return SyntaxError;
     }
 
@@ -503,11 +556,12 @@ Error_t GetElse(Node** node, List* tokens)
             if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == COLON)
                 {
                 tokens->head = tokens->head->right;
-                return GetBody(&(*node)->right, tokens);
                 }
+            return GetBody(&(*node)->right, tokens);
             }
         }
 
+    printf("Else error\n");
     return SyntaxError;
     }
 
@@ -532,6 +586,7 @@ Error_t GetWhile(Node** node, List* tokens)
             }
         }
 
+    printf("While error\n");
     return SyntaxError;
     }
 
@@ -553,12 +608,13 @@ Error_t GetAssigment(Node** node, List* tokens)
                     return GetExpression2(&(*node)->right, tokens);
                     }
                 }
+            printf("Assigment error\n");
             return SyntaxError;
             }
 
         tokens->head = tokens->head->left;
         }
-    return SyntaxError;
+    return NotAssigment;
     }
 
 Error_t GetBody(Node** node, List* tokens)
@@ -579,6 +635,7 @@ Error_t GetBody(Node** node, List* tokens)
             }
         }
 
+    printf("Body error\n");
     return SyntaxError;
     }
 
@@ -611,6 +668,7 @@ Error_t GetExpression2(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Expression2 error\n");
     return SyntaxError;
     }
 
@@ -645,6 +703,7 @@ Error_t GetExpression1(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Expression1 error\n");
     return SyntaxError;
     }
 
@@ -677,6 +736,7 @@ Error_t GetExpression0(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Expression0 error\n");
     return SyntaxError;
     }
 
@@ -685,7 +745,7 @@ Error_t GetTerm(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (GetPriority(node, tokens) == Ok)
+    if (GetUnary(node, tokens) == Ok)
         {
         if (tokens->head->type == OPERATION)
             {
@@ -693,14 +753,14 @@ Error_t GetTerm(Node** node, List* tokens)
                 {
                 case OP_MUL: case OP_DIV: case OP_POW:
                     {
-                    Node* priority = *node;
+                    Node* unary = *node;
                     *node = nullptr;
                     if (NewNode(node, OPERATION, tokens->head->data) == Ok)
                         {
-                        (*node)->left = priority;
+                        (*node)->left = unary;
 
                         tokens->head = tokens->head->right;
-                        return GetTerm(&(*node)->right, tokens);
+                        return GetUnary(&(*node)->right, tokens);
                         }
                     return SyntaxError;
                     }
@@ -709,7 +769,60 @@ Error_t GetTerm(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Term error\n");
     return SyntaxError;
+    }
+
+Error_t GetUnary(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    if (tokens->head->type == OPERATION)
+        {
+        switch (tokens->head->data.oper)
+            {
+            case OP_INPUT: case OP_OUTPUT:
+            case OP_SIN: case OP_COS: case OP_SQRT:
+            case OP_LOG: case OP_EXP:
+                {
+                if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+                    {
+                    tokens->head = tokens->head->right;
+                    if (GetPriority(&(*node)->right, tokens) != Ok)
+                        {
+                        printf("Unary error\n");
+                        return SyntaxError;
+                        }
+                    }
+                break;
+                }
+            default:
+                printf("Unary error\n");
+                return SyntaxError;
+            }
+        }
+    else if (GetPriority(node, tokens) != Ok)
+        {
+        printf("Unary error\n");
+        return SyntaxError;
+        }
+
+    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NOT)
+        {
+        Node* priority = *node;
+        *node = nullptr;
+        if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+            {
+            (*node)->right = priority;
+
+            tokens->head = tokens->head->right;
+            return Ok;
+            }
+        return SyntaxError;
+        }
+
+    return Ok;
     }
 
 Error_t GetPriority(Node** node, List* tokens)
@@ -725,43 +838,14 @@ Error_t GetPriority(Node** node, List* tokens)
             if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACKET)
                 {
                 tokens->head = tokens->head->right;
-                if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NOT)
-                    {
-                    Node* expression = *node;
-                    *node = nullptr;
-                    if (NewNode(node, OPERATION, tokens->head->data) == Ok)
-                        {
-                        (*node)->right = expression;
-
-                        tokens->head = tokens->head->right;
-                        return Ok;
-                        }
-                    return SyntaxError;
-                    }
                 return Ok;
                 }
             }
+        printf("Priority error\n");
+        return SyntaxError;
         }
 
-    if (GetObject(node, tokens) == Ok)
-        {
-        if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NOT)
-            {
-            Node* object = *node;
-            *node = nullptr;
-            if (NewNode(node, OPERATION, tokens->head->data) == Ok)
-                {
-                (*node)->right = object;
-
-                tokens->head = tokens->head->right;
-                return Ok;
-                }
-            return SyntaxError;
-            }
-        return Ok;
-        }
-
-    return SyntaxError;
+    return GetObject(node, tokens);
     }
 
 Error_t GetObject(Node** node, List* tokens)
@@ -776,6 +860,7 @@ Error_t GetObject(Node** node, List* tokens)
         case FUNCTION: return GetFunction(node, tokens);
         }
 
+    printf("Object error (get not object)\n");
     return SyntaxError;
     }
 
@@ -799,6 +884,7 @@ Error_t GetParametr(Node** node, List* tokens)
             }
         }
 
+    printf("Parametr error\n");
     return SyntaxError;
     }
 
@@ -832,6 +918,7 @@ Error_t GetFunction(Node** node, List* tokens)
             }
         }
 
+    printf("Function error\n");
     return SyntaxError;
     }
 
@@ -846,6 +933,7 @@ Error_t GetVariable(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Variable error\n");
     return SyntaxError;
     }
 
@@ -860,6 +948,7 @@ Error_t GetNumber(Node** node, List* tokens)
         return Ok;
         }
 
+    printf("Number error\n");
     return SyntaxError;
     }
 
