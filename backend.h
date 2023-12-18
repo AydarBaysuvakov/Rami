@@ -15,4 +15,13 @@ Error_t CompilerDtor(Compiler* cmp);
 
 Error_t ReadTree(Node** node, FILE* fp);
 
+Error_t WriteAsmCode(Compiler* cmp);
+Error_t WriteCommand(Node* node, FILE* fp);
+
+Error_t WriteEquation(Node* node, FILE* fp);
+Error_t WriteAssigment(Node* node, FILE* fp);
+Error_t WriteIf(Node* node, FILE* fp, const int order);
+Error_t WriteWhile(Node* node, FILE* fp);
+Error_t WriteBody(Node* node, FILE* fp);
+
 #endif //BACKEND_H

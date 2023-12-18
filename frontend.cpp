@@ -480,7 +480,7 @@ Error_t GetOperation(Node** node, List* tokens)
 
     if (response != Ok) return SyntaxError;
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NEXT)
+    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NEXT_COMMAND)
         {
         Node* operation = *node;
         *node = nullptr;
@@ -869,12 +869,12 @@ Error_t GetParametr(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    Data_t comma = {.punc = COMMA};
-    if (NewNode(node, PUNCTUATION, comma) == Ok)
+    Data_t parametr = {.oper = OP_NEXT_PARAMETR};
+    if (NewNode(node, OP_NEXT_PARAMETR, parametr) == Ok)
         {
         if (GetExpression2(&(*node)->left, tokens) == Ok)
             {
-            if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == COMMA)
+            if (tokens->head->type == OPERATION && tokens->head->data.punc == OP_NEXT_PARAMETR)
                 {
                 tokens->head = tokens->head->right;
                 return GetParametr(&(*node)->right, tokens);

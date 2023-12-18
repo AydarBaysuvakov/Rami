@@ -306,7 +306,6 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
             case OPEN_BRACE:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"{\"];\n", node); break;
             case CLOSE_BRACE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"}\"];\n", node); break;
             case COLON:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \":\"];\n", node); break;
-            case COMMA:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
             default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown punctuation\"];\n", node);
             }
         }
@@ -314,7 +313,8 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
         {
         switch (node->data.oper)
             {
-            case OP_NEXT:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
+            case OP_NEXT_COMMAND:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
+            case OP_NEXT_PARAMETR:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
             case OP_ASSIGMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"=\"];\n", node); break;
             case OP_GREATER:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \">\"];\n", node); break;
             case OP_LESS:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"<\"];\n", node); break;

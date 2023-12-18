@@ -19,14 +19,14 @@ enum Punctuation
     CLOSE_BRACKET    = 2,
     OPEN_BRACE       = 3,
     CLOSE_BRACE      = 4,
-    COMMA            = 5,
-    COLON            = 6,
-    PROGRAM_START    = 7
+    COLON            = 5,
+    PROGRAM_START    = 6
     };
 
 enum Operation
     {
-    OP_NEXT             = 1,
+    OP_NEXT_COMMAND     = 1,
+    OP_NEXT_PARAMETR    = 2,
     OP_ASSIGMENT        = 51,
     OP_GREATER          = 52,
     OP_LESS             = 53,

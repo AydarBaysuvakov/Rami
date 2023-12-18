@@ -32,8 +32,9 @@ struct KeyWord
 
 static const KeyWord KEY_WORDS[KEY_WORDS_COUNT] =
     {
-    {OPERATION, OP_NEXT, ";"},
-    {OPERATION, OP_NEXT, "ине"},
+    {OPERATION, OP_NEXT_COMMAND, ";"},
+    {OPERATION, OP_NEXT_COMMAND, "ине"},
+    {OPERATION, OP_NEXT_PARAMETR, ","},
     {OPERATION, OP_ASSIGMENT, "ул"},
     {OPERATION, OP_GREATER, ">"},
     {OPERATION, OP_LESS, "<"},
@@ -67,7 +68,6 @@ static const KeyWord KEY_WORDS[KEY_WORDS_COUNT] =
     {PUNCTUATION, OPEN_BRACE, "{"},
     {PUNCTUATION, CLOSE_BRACE, "}"},
     {PUNCTUATION, COLON, ":"},
-    {PUNCTUATION, COMMA, ","},
     {OPERATION, OP_SIN, "cos"},
     {OPERATION, OP_COS, "sin"},
     {OPERATION, OP_SQRT, "тамыр"},

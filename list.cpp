@@ -321,25 +321,26 @@ Error_t ListNodeDump(const Node *node, FILE *fp)
         {
         switch (node->data.oper)
             {
-            case OP_NEXT:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
-            case OP_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"=\"];\n", node); break;
-            case OP_EQUAL:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"==\"];\n", node); break;
-            case OP_ADD:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+\"];\n", node); break;
-            case OP_SUB:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-\"];\n", node); break;
-            case OP_MUL:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*\"];\n", node); break;
-            case OP_DIV:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/\"];\n", node); break;
-            case OP_POW:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^\"];\n", node); break;
-            case OP_SIN:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sin\"];\n", node); break;
-            case OP_COS:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"cos\"];\n", node); break;
-            case OP_LOG:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"log\"];\n", node); break;
-            case OP_EXP:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"exp\"];\n", node); break;
-            case OP_SQRT:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sqrt\"];\n", node); break;
-            case OP_IF:         fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"if\"];\n", node); break;
-            case OP_WHILE:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"while\"];\n", node); break;
-            case OP_ELSE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"else\"];\n", node); break;
-            case OP_AND:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"and\"];\n", node); break;
-            case OP_OR:         fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"or\"];\n", node); break;
-            default:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown operator\"];\n", node);
+            case OP_NEXT_COMMAND:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
+            case OP_NEXT_PARAMETR:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
+            case OP_ASSIGMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"=\"];\n", node); break;
+            case OP_EQUAL:          fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"==\"];\n", node); break;
+            case OP_ADD:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+\"];\n", node); break;
+            case OP_SUB:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-\"];\n", node); break;
+            case OP_MUL:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*\"];\n", node); break;
+            case OP_DIV:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/\"];\n", node); break;
+            case OP_POW:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^\"];\n", node); break;
+            case OP_SIN:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sin\"];\n", node); break;
+            case OP_COS:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"cos\"];\n", node); break;
+            case OP_LOG:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"log\"];\n", node); break;
+            case OP_EXP:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"exp\"];\n", node); break;
+            case OP_SQRT:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sqrt\"];\n", node); break;
+            case OP_IF:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"if\"];\n", node); break;
+            case OP_WHILE:          fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"while\"];\n", node); break;
+            case OP_ELSE:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"else\"];\n", node); break;
+            case OP_AND:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"and\"];\n", node); break;
+            case OP_OR:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"or\"];\n", node); break;
+            default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown operator\"];\n", node);
             }
         }
 

@@ -51,6 +51,7 @@ Error_t Backend(const char* file_from, const char* file_to)
         return SyntaxError;
         }
 
+    WriteAsmCode(&cmp);
     TreeDump(&cmp.tree, 0);
     CompilerDtor(&cmp);
 
@@ -148,6 +149,167 @@ Error_t ReadTree(Node** node, FILE* fp)
 Error_t WriteAsmCode(Compiler* cmp)
     {
     assert(cmp);
+
+    Node* command = cmp->tree.root;
+
+    while (command)
+        {
+        if (WriteCommand(command->left, cmp->file_to) != Ok)
+            {
+            printf("Syntax error in program\n");
+            return SyntaxError;
+            }
+        command = command->right;
+        }
+
+    return Ok;
+    }
+
+static int if_number = 0;
+static int while_number = 0;
+
+Error_t WriteCommand(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    fprintf(fp, "\n");
+
+    if (node->type == OPERATION && node->data.oper == OP_ASSIGMENT)
+        {
+        return WriteAssigment(node, fp);
+        }
+    if (node->type == OPERATION && node->data.oper == OP_WHILE)
+        {
+        while_number += 1;
+        return WriteWhile(node, fp);
+        }
+    if (node->type == OPERATION && (node->data.oper == OP_IF || node->data.oper == OP_ELSE))
+        {
+        if_number += 1;
+        Error_t response = WriteIf(node, fp, 0);
+        fprintf(fp, "end_if_%d:\n", if_number);
+        return response;
+        }
+    if (node->type == OPERATION && node->data.oper == OP_NEXT_COMMAND)
+        {
+        return WriteBody(node, fp);
+        }
+
+    return WriteEquation(node, fp);
+    }
+
+Error_t WriteEquation(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    #define DEFINE_OPERATION(oper, code) case oper: code; break;
+
+    switch (node->type)
+        {
+        case VALUE:
+            fprintf(fp, "push %f\n", node->data.val);
+            break;
+        case VARIABLE:
+            fprintf(fp, "push [%d]\n", node->data.var);
+            break;
+        case FUNCTION:
+            fprintf(fp, "call func_%d\n", node->data.func);
+            break;
+        case OPERATION:
+            switch (node->data.oper)
+                {
+                #include "operations.h"
+                default:
+                    printf("Syntax error: wrong operation\n");
+                    return SyntaxError;
+                }
+            break;
+        default:
+            printf("Syntax error: wrong argument type\n");
+            return SyntaxError;
+        }
+
+    #undef DEFINE_OPERATION
+
+    return Ok;
+    }
+
+Error_t WriteAssigment(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    WriteEquation(node->right, fp);
+    fprintf(fp, "pop [%d]\n", node->left->data.var);
+
+    return Ok;
+    }
+
+Error_t WriteBody(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    while (node)
+        {
+        if (WriteCommand(node->left, fp) != Ok)
+            {
+            printf("Syntax error in program body\n");
+            return SyntaxError;
+            }
+        node = node->right;
+        }
+
+    return Ok;
+    }
+
+Error_t WriteWhile(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    fprintf(fp, "while_%d:\n", while_number);
+    WriteEquation(node->left, fp);
+    fprintf(fp, "push 0\n");
+    fprintf(fp, "je end_while_%d", while_number);
+    WriteBody(node->right, fp);
+    fprintf(fp, "jmp while_%d\n", while_number);
+    fprintf(fp, "end_while_%d:\n", while_number);
+
+    return Ok;
+    }
+
+Error_t WriteIf(Node* node, FILE* fp, int order)
+    {
+    assert(node);
+    assert(fp);
+
+    if (node->type == OPERATION && node->data.oper == OP_IF)
+        {
+        WriteEquation(node->left, fp);
+        fprintf(fp, "push 0\n");
+        fprintf(fp, "je end_if_%d\n", if_number);
+        WriteBody(node->right, fp);
+        fprintf(fp, "jmp end_if_%d\n\n", if_number);
+        }
+    else if (node->type == OPERATION && node->data.oper == OP_ELSE)
+        {
+        Node* if_node = node->left;
+        WriteEquation(if_node->left, fp);
+        fprintf(fp, "push 0\n");
+        fprintf(fp, "jne if_%d_%d\n", if_number, order);
+        WriteIf(node->right, fp, order + 1);
+        fprintf(fp, "if_%d_%d:\n", if_number, order);
+        WriteBody(if_node->right, fp);
+        fprintf(fp, "jmp end_if_%d\n\n", if_number);
+        }
+    else
+        {
+        WriteBody(node, fp);
+        fprintf(fp, "jmp end_if_%d\n", if_number);
+        }
 
     return Ok;
     }
