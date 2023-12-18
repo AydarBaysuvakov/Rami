@@ -192,7 +192,7 @@ Error_t MyTreeDump(Tree *tree,
     fclose(img_file_ptr);
 
     char command[COMMAND_LENGTH] = "";
-    snprintf(command, sizeof(command), "dot -v -Tpng %s -o logfiles/img_log_%d.png", img_file_name, tree->dumps_count);
+    snprintf(command, sizeof(command), "dot -v -Tpng %s -o logfiles/tree_img_log_%d.png", img_file_name, tree->dumps_count);
     system(command);
 
     ++tree->dumps_count;

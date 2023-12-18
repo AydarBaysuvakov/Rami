@@ -178,7 +178,7 @@ Error_t MyListDump( List *list,
     fclose(img_file_ptr);
 
     char command[COMMAND_LENGTH] = "";
-    snprintf(command, sizeof(command), "dot -v -Tpng %s -o logfiles/img_log%d.png", img_file_name, list->dumps_count);
+    snprintf(command, sizeof(command), "dot -v -Tpng %s -o logfiles/list_img_log_%d.png", img_file_name, list->dumps_count);
     system(command);
 
     ++list->dumps_count;
