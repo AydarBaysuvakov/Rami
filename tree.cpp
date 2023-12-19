@@ -21,7 +21,6 @@ Error_t MyTreeCtor(Tree* tree,
     assert(tree != NULL);
 
     tree->root = nullptr;
-    tree->size = 0;
 
     tree->name = name;
     tree->line = line;
@@ -82,7 +81,7 @@ Error_t PreorderNode(const Node* node, FILE* file)
     fprintf(file, "%d ", node->type);
 
     if (node->type == VALUE) fprintf(file, "%f ", node->data.val);
-    else fprintf(file, "%d ", node->data.oper);
+    else fprintf(file, "%d ", node->data.id);
 
     PreorderNode(node->left, file);
     PreorderNode(node->right, file);
@@ -108,7 +107,7 @@ Error_t PostorderNode(const Node* node, FILE* file)
     fprintf(file, "%d ", node->type);
 
     if (node->type == VALUE) fprintf(file, "%f ", node->data.val);
-    else fprintf(file, "%d ", node->data.oper);
+    else fprintf(file, "%d ", node->data.id);
 
     fprintf(file, ") ");
 
@@ -131,7 +130,7 @@ Error_t InorderNode(const Node* node, FILE* file)
     fprintf(file, "%d ", node->type);
 
     if (node->type == VALUE) fprintf(file, "%f ", node->data.val);
-    else fprintf(file, "%d ", node->data.oper);
+    else fprintf(file, "%d ", node->data.id);
 
     InorderNode(node->right, file);
 
@@ -226,8 +225,6 @@ Error_t TreeDumpMessage(const Tree *tree,
         fprintf(tree->logfile, "\t\tnil");
         }
 
-    fprintf(tree->logfile, "\tsize = %ld\n\t}\n\n", tree->size);
-
     for(size_t bit = 0; bit < CHAR_BIT * sizeof(state); bit++)
         {
         if (state & 1 << bit)
@@ -293,11 +290,12 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
         return Ok;
         }
     else if (node->type == VALUE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VALUE: %f\"];\n", node, node->data.val);
-    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VARIABLE %d\"];\n", node, node->data.var);
-    else if (node->type == FUNCTION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"FUNCTIOn %d\"];\n", node, node->data.func);
+    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VARIABLE %d\"];\n", node, node->data.id);
+    else if (node->type == ARRAY) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"ARRAY %d\"];\n", node, node->data.id);
+    else if (node->type == FUNCTION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"FUNCTION %d\"];\n", node, node->data.id);
     else if (node->type == PUNCTUATION)
         {
-        switch (node->data.punc)
+        switch (node->data.id)
             {
             case PROGRAM_START:     fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"START\"];\n", node); break;
             case NULL_TERMINATOR:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"END\"];\n", node); break;
@@ -305,13 +303,15 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
             case CLOSE_BRACKET:     fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \")\"];\n", node); break;
             case OPEN_BRACE:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"{\"];\n", node); break;
             case CLOSE_BRACE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"}\"];\n", node); break;
+            case OPEN_SQUARE:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"[\"];\n", node); break;
+            case CLOSE_SQUARE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"]\"];\n", node); break;
             case COLON:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \":\"];\n", node); break;
             default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown punctuation\"];\n", node);
             }
         }
     else if (node->type == OPERATION)
         {
-        switch (node->data.oper)
+        switch (node->data.id)
             {
             case OP_NEXT_COMMAND:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
             case OP_NEXT_PARAMETR:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
@@ -327,6 +327,13 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
             case OP_MUL:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*\"];\n", node); break;
             case OP_DIV:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/\"];\n", node); break;
             case OP_POW:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^\"];\n", node); break;
+            case OP_ADD_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+=\"];\n", node); break;
+            case OP_SUB_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-=\"];\n", node); break;
+            case OP_MUL_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*=\"];\n", node); break;
+            case OP_DIV_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/=\"];\n", node); break;
+            case OP_POW_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^=\"];\n", node); break;
+            case OP_INCREMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"++\"];\n", node); break;
+            case OP_DECREMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"--\"];\n", node); break;
             case OP_SIN:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sin\"];\n", node); break;
             case OP_COS:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"cos\"];\n", node); break;
             case OP_LOG:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"log\"];\n", node); break;
@@ -340,6 +347,9 @@ Error_t TreeNodeDump(const Node *node, FILE *fp)
             case OP_NOT:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"not\"];\n", node); break;
             case OP_INPUT:          fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"input\"];\n", node); break;
             case OP_OUTPUT:         fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"output\"];\n", node); break;
+            case OP_DEFINE_VARIABLE:fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"var def\"];\n", node); break;
+            case OP_DEFINE_ARRAY:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"arr def\"];\n", node); break;
+            case OP_DEFINE_FUNCTION:fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"func def\"];\n", node); break;
             default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown operator\"];\n", node);
             }
         }

@@ -12,6 +12,9 @@ static bool IsListErrorState(const State_t state);
 static void ListAssert(List* list);
 static const char* GetListErrorBitMsg(const size_t bit);
 
+static Error_t DestroyListNodeLeft(Node* node);
+static Error_t DestroyListNodeRight(Node* node);
+
 Error_t MyListCtor(List* list,
                    const char* name,
                    const unsigned line,
@@ -28,12 +31,10 @@ Error_t MyListCtor(List* list,
         }
 
     list->head->type          = PUNCTUATION;
-    list->head->data.punc     = PROGRAM_START;
+    list->head->data.id       = PROGRAM_START;
 
     list->head->left   = nullptr;
     list->head->right  = nullptr;
-
-    list->size = 0;
 
     list->name = name;
     list->line = line;
@@ -55,7 +56,12 @@ Error_t ListDtor(List *list)
     {
     ListAssert(list);
 
-    if (list->head) DestroyListNode(list->head);
+    if (list->head)
+        {
+        if (list->head->left)  DestroyListNodeLeft(list->head->left);
+        if (list->head->right) DestroyListNodeRight(list->head->right);
+        free(list->head);
+        }
 
     fclose(list->logfile);
 
@@ -80,17 +86,8 @@ Error_t ListInsert(Node* node, const int type, const Data_t data)
         case VALUE:
             new_node->data.val  = data.val;
             break;
-        case VARIABLE:
-            new_node->data.var  = data.var;
-            break;
-        case OPERATION:
-            new_node->data.oper = data.oper;
-            break;
-        case FUNCTION:
-            new_node->data.func = data.func;
-            break;
-        case PUNCTUATION:
-            new_node->data.punc = data.punc;
+        default:
+            new_node->data.id   = data.id;
             break;
         }
 
@@ -115,11 +112,22 @@ Error_t ListExtract(Node* node)
     return Ok;
     }
 
-Error_t DestroyListNode(Node* node)
+static Error_t DestroyListNodeLeft(Node* node)
     {
     assert(node != NULL);
 
-    if (node->left) DestroyListNode(node->left);
+    if (node->left) DestroyListNodeLeft(node->left);
+
+    free(node);
+
+    return Ok;
+    }
+
+static Error_t DestroyListNodeRight(Node* node)
+    {
+    assert(node != NULL);
+
+    if (node->right) DestroyListNodeRight(node->right);
 
     free(node);
 
@@ -211,22 +219,23 @@ Error_t ListDumpMessage(const List *list,
                 fprintf(list->logfile, "\t\tVALUE: %f\n", node->data.val);
                 break;
             case VARIABLE:
-                fprintf(list->logfile, "\t\tVARIABLE: %d\n", node->data.var);
+                fprintf(list->logfile, "\t\tVARIABLE: %d\n", node->data.id);
+                break;
+            case ARRAY:
+                fprintf(list->logfile, "\t\tARRAY: %d\n", node->data.id);
                 break;
             case OPERATION:
-                fprintf(list->logfile, "\t\tOPERATION: %d\n", node->data.oper);
+                fprintf(list->logfile, "\t\tOPERATION: %d\n", node->data.id);
                 break;
             case FUNCTION:
-                fprintf(list->logfile, "\t\tFUNCTION: %d\n", node->data.func);
+                fprintf(list->logfile, "\t\tFUNCTION: %d\n", node->data.id);
                 break;
             case PUNCTUATION:
-                fprintf(list->logfile, "\t\tPUNCTUATION: %d\n", node->data.punc);
+                fprintf(list->logfile, "\t\tPUNCTUATION: %d\n", node->data.id);
                 break;
             }
         node = node->right;
         }
-
-    fprintf(list->logfile, "\tsize = %ld\n\t}\n\n", list->size);
 
     for(size_t bit = 0; bit < CHAR_BIT * sizeof(state); bit++)
         {
@@ -300,11 +309,12 @@ Error_t ListNodeDump(const Node *node, FILE *fp)
         return Ok;
         }
     else if (node->type == VALUE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VALUE: %f\"];\n", node, node->data.val);
-    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VARIABLE %d\"];\n", node, node->data.var);
-    else if (node->type == FUNCTION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"FUNCTIOn %d\"];\n", node, node->data.func);
+    else if (node->type == VARIABLE) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"VARIABLE %d\"];\n", node, node->data.id);
+    else if (node->type == ARRAY) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"ARRAY %d\"];\n", node, node->data.id);
+    else if (node->type == FUNCTION) fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"FUNCTION %d\"];\n", node, node->data.id);
     else if (node->type == PUNCTUATION)
         {
-        switch (node->data.punc)
+        switch (node->data.id)
             {
             case PROGRAM_START:     fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"START\"];\n", node); break;
             case NULL_TERMINATOR:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"END\"];\n", node); break;
@@ -312,24 +322,37 @@ Error_t ListNodeDump(const Node *node, FILE *fp)
             case CLOSE_BRACKET:     fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \")\"];\n", node); break;
             case OPEN_BRACE:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"{\"];\n", node); break;
             case CLOSE_BRACE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"}\"];\n", node); break;
+            case OPEN_SQUARE:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"[\"];\n", node); break;
+            case CLOSE_SQUARE:       fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"]\"];\n", node); break;
             case COLON:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \":\"];\n", node); break;
-            case COMMA:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
             default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown punctuation\"];\n", node);
             }
         }
     else if (node->type == OPERATION)
         {
-        switch (node->data.oper)
+        switch (node->data.id)
             {
             case OP_NEXT_COMMAND:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \";\"];\n", node); break;
             case OP_NEXT_PARAMETR:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \",\"];\n", node); break;
             case OP_ASSIGMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"=\"];\n", node); break;
+            case OP_GREATER:        fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \">\"];\n", node); break;
+            case OP_LESS:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"<\"];\n", node); break;
+            case OP_GREATER_EQUAL:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \">=\"];\n", node); break;
+            case OP_LESS_EQUAL:     fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"<=\"];\n", node); break;
             case OP_EQUAL:          fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"==\"];\n", node); break;
+            case OP_NOT_EQUAL:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"!=\"];\n", node); break;
             case OP_ADD:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+\"];\n", node); break;
             case OP_SUB:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-\"];\n", node); break;
             case OP_MUL:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*\"];\n", node); break;
             case OP_DIV:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/\"];\n", node); break;
             case OP_POW:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^\"];\n", node); break;
+            case OP_ADD_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"+=\"];\n", node); break;
+            case OP_SUB_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"-=\"];\n", node); break;
+            case OP_MUL_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"*=\"];\n", node); break;
+            case OP_DIV_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"/=\"];\n", node); break;
+            case OP_POW_ASSIGMENT:  fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"^=\"];\n", node); break;
+            case OP_INCREMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"++\"];\n", node); break;
+            case OP_DECREMENT:      fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"--\"];\n", node); break;
             case OP_SIN:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"sin\"];\n", node); break;
             case OP_COS:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"cos\"];\n", node); break;
             case OP_LOG:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"log\"];\n", node); break;
@@ -340,9 +363,16 @@ Error_t ListNodeDump(const Node *node, FILE *fp)
             case OP_ELSE:           fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"else\"];\n", node); break;
             case OP_AND:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"and\"];\n", node); break;
             case OP_OR:             fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"or\"];\n", node); break;
+            case OP_NOT:            fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"not\"];\n", node); break;
+            case OP_INPUT:          fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"input\"];\n", node); break;
+            case OP_OUTPUT:         fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"output\"];\n", node); break;
+            case OP_DEFINE_VARIABLE:fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"var def\"];\n", node); break;
+            case OP_DEFINE_ARRAY:   fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"arr def\"];\n", node); break;
+            case OP_DEFINE_FUNCTION:fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"func def\"];\n", node); break;
             default:                fprintf(fp,  "\t\t\"%p\" [shape=oval, height = 1, label = \"unknown operator\"];\n", node);
             }
         }
+
 
     if (node->right)
         {

@@ -56,16 +56,16 @@ Error_t Differentiation(Node** dest, const Node* src)
     if (*dest) DeleteNode(*dest);
     *dest = nullptr;
 
-    Data_t add = {.oper = OP_ADD};
-    Data_t sub = {.oper = OP_SUB};
-    Data_t mul = {.oper = OP_MUL};
-    Data_t div = {.oper = OP_DIV};
-    Data_t pow = {.oper = OP_POW};
-    Data_t sin = {.oper = OP_SIN};
-    Data_t cos = {.oper = OP_COS};
-    Data_t log = {.oper = OP_LOG};
-    Data_t exp = {.oper = OP_EXP};
-    Data_t sqrt = {.oper = OP_SQRT};
+    Data_t add = {.id = OP_ADD};
+    Data_t sub = {.id = OP_SUB};
+    Data_t mul = {.id = OP_MUL};
+    Data_t div = {.id = OP_DIV};
+    Data_t pow = {.id = OP_POW};
+    Data_t sin = {.id = OP_SIN};
+    Data_t cos = {.id = OP_COS};
+    Data_t log = {.id = OP_LOG};
+    Data_t exp = {.id = OP_EXP};
+    Data_t sqrt = {.id = OP_SQRT};
 
     if (src->type == VALUE)
         {
@@ -400,9 +400,9 @@ bool Simplifier(Node** node)
     while (Simplifier(&(*node)->right)) changed = true;
 
     // 1 * x || 0 + x
-    if ( (*node)->left                && (*node)->left->type == VALUE &&
-        ((*node)->data.oper == OP_MUL && (*node)->left->data.val == 1 ||
-         (*node)->data.oper == OP_ADD && (*node)->left->data.val == 0))
+    if ( (*node)->left              && (*node)->left->type == VALUE &&
+        ((*node)->data.id == OP_MUL && (*node)->left->data.val == 1 ||
+         (*node)->data.id == OP_ADD && (*node)->left->data.val == 0))
         {
         DeleteNode((*node)->left);
         (*node)->left = nullptr;
@@ -414,12 +414,12 @@ bool Simplifier(Node** node)
         return true;
         }
     // x * 1 || x + 0 || x ^ 1 || x - 0 || x / 1
-    if ( (*node)->right               && (*node)->right->type == VALUE &&
-        ((*node)->data.oper == OP_MUL && (*node)->right->data.val == 1 ||
-         (*node)->data.oper == OP_ADD && (*node)->right->data.val == 0 ||
-         (*node)->data.oper == OP_POW && (*node)->right->data.val == 1 ||
-         (*node)->data.oper == OP_SUB && (*node)->right->data.val == 0 ||
-         (*node)->data.oper == OP_DIV && (*node)->right->data.val == 1))
+    if ( (*node)->right             && (*node)->right->type == VALUE &&
+        ((*node)->data.id == OP_MUL && (*node)->right->data.val == 1 ||
+         (*node)->data.id == OP_ADD && (*node)->right->data.val == 0 ||
+         (*node)->data.id == OP_POW && (*node)->right->data.val == 1 ||
+         (*node)->data.id == OP_SUB && (*node)->right->data.val == 0 ||
+         (*node)->data.id == OP_DIV && (*node)->right->data.val == 1))
         {
         DeleteNode((*node)->right);
         (*node)->right = nullptr;
@@ -431,9 +431,9 @@ bool Simplifier(Node** node)
         return true;
         }
     // 0 * x || x * 0 || 0 ^ x
-    if ( (*node)->data.oper == OP_MUL && (*node)->left->type  == VALUE && (*node)->left->data.val  == 0 ||
-         (*node)->data.oper == OP_MUL && (*node)->right->type == VALUE && (*node)->right->data.val == 0 ||
-         (*node)->data.oper == OP_POW && (*node)->left->type  == VALUE && (*node)->left->data.val == 0)
+    if ( (*node)->data.id == OP_MUL && (*node)->left->type  == VALUE && (*node)->left->data.val  == 0 ||
+         (*node)->data.id == OP_MUL && (*node)->right->type == VALUE && (*node)->right->data.val == 0 ||
+         (*node)->data.id == OP_POW && (*node)->left->type  == VALUE && (*node)->left->data.val == 0)
         {
         DeleteNode((*node)->left);
         (*node)->left = nullptr;
@@ -447,7 +447,7 @@ bool Simplifier(Node** node)
         return true;
         }
     // x ^ 0 || 1 ^ x
-    if (  (*node)->data.oper == OP_POW &&
+    if (  (*node)->data.id == OP_POW   &&
         ((*node)->right->type == VALUE && (*node)->right->data.val == 0 ||
          (*node)->left->type  == VALUE &&  (*node)->left->data.val == 1))
         {
@@ -463,11 +463,11 @@ bool Simplifier(Node** node)
         return true;
         }
     // x + (-y) || x - (-y)
-    if (((*node)->data.oper == OP_ADD  || (*node)->data.oper == OP_SUB) &&
+    if (((*node)->data.id == OP_ADD    || (*node)->data.id == OP_SUB) &&
          (*node)->right->type == VALUE && (*node)->right->data.val < 0)
         {
         Data_t data = {0};
-        data.oper = ((*node)->data.oper == OP_ADD) ? (OP_SUB) : (OP_ADD);
+        data.id = ((*node)->data.id == OP_ADD) ? (OP_SUB) : (OP_ADD);
         EditNode(*node, OPERATION, data);
         data.val = -1 * (*node)->right->data.val;
         EditNode((*node)->right, VALUE, data);
@@ -480,7 +480,7 @@ bool Simplifier(Node** node)
 static bool FindAddSub(Node* node)
     {
     if (!node) return false;
-    if (node->type == OPERATION && (node->data.oper == OP_ADD || node->data.oper == OP_SUB))
+    if (node->type == OPERATION && (node->data.id == OP_ADD || node->data.id == OP_SUB))
         {
         return true;
         }

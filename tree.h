@@ -10,7 +10,6 @@
 struct Tree
     {
     Node*  root;
-    size_t size;
 
     const char* name;
     unsigned    line;
@@ -23,8 +22,7 @@ struct Tree
 
 enum TreeErrorBit
     {
-    TreeNullptr                = 1 << 0,
-    TreeWrongSize              = 1 << 1
+    TreeNullptr                = 1 << 0
     };
 
 Error_t MyTreeCtor(Tree* tree, TREE_DEFN_ARGS);

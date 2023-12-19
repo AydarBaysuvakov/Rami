@@ -10,7 +10,6 @@
 struct List
     {
     Node*   head;
-    size_t  size;
 
     const char* name;
     unsigned    line;
@@ -24,9 +23,8 @@ struct List
 enum ListErrorBit
     {
     ListNullptr                     = 1 << 0,
-    ListWrongSize                   = 1 << 1,
-    InvalidHead                     = 1 << 2,
-    InvalidTail                     = 1 << 3
+    InvalidHead                     = 1 << 1,
+    InvalidTail                     = 1 << 2
     };
 
 Error_t MyListCtor(List* list, LIST_DEFN_ARGS);
@@ -34,7 +32,6 @@ Error_t ListDtor(List *list);
 
 Error_t ListInsert(Node* node, const int type, Data_t data);
 Error_t ListExtract(Node* node);
-Error_t DestroyListNode(Node* node);
 
 State_t ListVerify(const List* list);
 

@@ -10,11 +10,9 @@
 #include "list.h"
 #include "frontend.h"
 
-static void syntax_assert(int expr, Compiler *cmp);
-static void syntax_error(Compiler *cmp);
-
 static void ReadNumber(Compiler* cmp, Node* node);
 static void ReadKeyWord(Compiler* cmp, Node* node);
+static void NewKeyWord(Compiler* cmp, Node* node, int index);
 static void ReadOperation(Compiler* cmp, Node* node);
 
 static int  IsLetter(char* str, int pos);
@@ -65,14 +63,14 @@ Error_t Frontend(const char* file_from, const char* file_to)
         return cmp.error;
         }
 
-    ListDump(&cmp.tokens, 0);
+    //ListDump(&cmp.tokens, 0);
 
     if (GetGrammar(&cmp) != Ok)
         {
+        //TreeDump(&cmp.tree, 0);
         CompilerDtor(&cmp);
         return SyntaxError;
         }
-
     TreeDump(&cmp.tree, 0);
 
     WriteTree(&cmp, file_to);
@@ -224,7 +222,7 @@ Error_t TokenParsing(Compiler* cmp)
         if (cmp->error)  return cmp->error;
         }
 
-    Data_t data = {.punc = NULL_TERMINATOR};
+    Data_t data = {.id = NULL_TERMINATOR};
     ListInsert(node, PUNCTUATION, data);
 
     return Ok;
@@ -258,7 +256,7 @@ static void ReadNumber(Compiler* cmp, Node* node)
             else dot = true;
             }
 
-        cmp->pos++;
+        ++cmp->pos;
         }
     }
 
@@ -285,7 +283,7 @@ static void ReadKeyWord(Compiler* cmp, Node* node)
                 cmp->pos -= strlen(KEY_WORDS[i].name);
                 continue;
                 }
-            Data_t data = {.oper = KEY_WORDS[i].code};
+            Data_t data = {.id = KEY_WORDS[i].code};
             ListInsert(node, KEY_WORDS[i].type, data);
             return;
             }
@@ -293,10 +291,9 @@ static void ReadKeyWord(Compiler* cmp, Node* node)
 
     int index = 0;
 
-    for (; index < cmp->name_count; index++)
+    for (; index < cmp->name_count && cmp->name_table[index].name; index++)
         {
-        if (cmp->name_table[index].name &&
-            !strncmp(cmp->str + cmp->pos, cmp->name_table[index].name, strlen(cmp->name_table[index].name)))
+        if (!strncmp(cmp->str + cmp->pos, cmp->name_table[index].name, strlen(cmp->name_table[index].name)))
             {
             cmp->pos += strlen(cmp->name_table[index].name);
             if (IsLetter(cmp->str, cmp->pos) ||
@@ -305,12 +302,19 @@ static void ReadKeyWord(Compiler* cmp, Node* node)
                 cmp->pos -= strlen(cmp->name_table[index].name);
                 continue;
                 }
-            Data_t data = {.var = index};
+            Data_t data = {.id = index};
             ListInsert(node, cmp->name_table[index].type, data);
             return;
             }
-        else if (!cmp->name_table[index].name) break;
         }
+
+    NewKeyWord(cmp, node, index);
+    }
+
+static void NewKeyWord(Compiler* cmp, Node* node, int index)
+    {
+    assert(cmp);
+    assert(node);
 
     if (index == cmp->name_count)
         {
@@ -347,20 +351,49 @@ static void ReadKeyWord(Compiler* cmp, Node* node)
     cmp->name_table[index].name = name;
     if (cmp->str[cmp->pos + word_length] == '(')
         {
-        cmp->name_table[index].type = FUNCTION;
+        if (node->type == OPERATION && node->data.id == OP_DEFINE_FUNCTION)
+            {
+            cmp->name_table[index].type = FUNCTION;
+            }
+        else
+            {
+            printf("Syntax error: function %s not defined\n", name);
+            cmp->error = SyntaxError;
+            return;
+            }
+        }
+    else if (cmp->str[cmp->pos + word_length] == '[')
+        {
+        if (node->type == OPERATION && node->data.id == OP_DEFINE_ARRAY)
+            {
+            cmp->name_table[index].type = ARRAY;
+            }
+        else
+            {
+            printf("Syntax error: array %s not defined\n", name);
+            cmp->error = SyntaxError;
+            return;
+            }
         }
     else
         {
-        cmp->name_table[index].type = VARIABLE;
+        if (node->type == OPERATION && node->data.id == OP_DEFINE_VARIABLE)
+            {
+            cmp->name_table[index].type = VARIABLE;
+            }
+        else
+            {
+            printf("Syntax error: variable %s not defined\n", name);
+            cmp->error = SyntaxError;
+            return;
+            }
         }
 
-    Data_t data = {.var = index};
+    Data_t data = {.id = index};
     ListInsert(node, cmp->name_table[index].type, data);
 
     cmp->pos += word_length;
-    //printf("new variable %d %s, %d\n", index, name, cmp->pos);
     }
-
 
 static void ReadOperation(Compiler* cmp, Node* node)
     {
@@ -372,7 +405,7 @@ static void ReadOperation(Compiler* cmp, Node* node)
         if (!strncmp(cmp->str + cmp->pos, KEY_WORDS[i].name, strlen(KEY_WORDS[i].name)))
             {
             cmp->pos += strlen(KEY_WORDS[i].name);
-            Data_t data = {.oper = KEY_WORDS[i].code};
+            Data_t data = {.id = KEY_WORDS[i].code};
             ListInsert(node, KEY_WORDS[i].type, data);
             return;
             }
@@ -429,12 +462,12 @@ Error_t GetGrammar(Compiler* cmp)
     {
     assert(cmp);
 
-    if (cmp->tokens.head->type == PUNCTUATION && cmp->tokens.head->data.punc == PROGRAM_START)
+    if (cmp->tokens.head->type == PUNCTUATION && cmp->tokens.head->data.id == PROGRAM_START)
         {
         cmp->tokens.head = cmp->tokens.head->right;
         if (GetOperation(&cmp->tree.root, &cmp->tokens) == Ok)
             {
-            if (cmp->tokens.head->type == PUNCTUATION && cmp->tokens.head->data.punc == NULL_TERMINATOR)
+            if (cmp->tokens.head->type == PUNCTUATION && cmp->tokens.head->data.id == NULL_TERMINATOR)
                 {
                 return Ok;
                 }
@@ -451,23 +484,47 @@ Error_t GetOperation(Node** node, List* tokens)
     assert(tokens);
 
     if  (tokens->head->type == PUNCTUATION &&
-        (tokens->head->data.punc == NULL_TERMINATOR || tokens->head->data.punc == CLOSE_BRACE))
+        (tokens->head->data.id == NULL_TERMINATOR || tokens->head->data.id == CLOSE_BRACE))
         {
         return Ok;
         }
 
     Error_t response = Ok;
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_IF)
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_IF)
         {
         response = GetIf(node, tokens);
         }
-    else if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_WHILE)
+    else if (tokens->head->type == OPERATION && tokens->head->data.id == OP_WHILE)
         {
         response = GetWhile(node, tokens);
         }
-    else if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == OPEN_BRACE)
+    else if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_BRACE)
         {
         response = GetBody(node, tokens);
+        }
+    else if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_VARIABLE)
+        {
+        response = GetDefineVariable(node, tokens);
+        }
+    else if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_ARRAY)
+        {
+        response = GetDefineArray(node, tokens);
+        }
+    else if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_FUNCTION)
+        {
+        response = GetDefineFunction(node, tokens);
+        }
+    else if (tokens->head->type == OPERATION      &&
+            (tokens->head->data.id == OP_BREAK    ||
+             tokens->head->data.id == OP_CONTINUE ||
+             tokens->head->data.id == OP_RETURN))
+        {
+        response = NewNode(node, OPERATION, tokens->head->data);
+        tokens->head = tokens->head->right;
+        if (response == Ok && tokens->head->data.id != OP_NEXT_COMMAND)
+            {
+            response = GetExpression2(&(*node)->right, tokens);
+            }
         }
     else
         {
@@ -480,7 +537,7 @@ Error_t GetOperation(Node** node, List* tokens)
 
     if (response != Ok) return SyntaxError;
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NEXT_COMMAND)
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_NEXT_COMMAND)
         {
         Node* operation = *node;
         *node = nullptr;
@@ -498,24 +555,188 @@ Error_t GetOperation(Node** node, List* tokens)
     return SyntaxError;
     }
 
+Error_t GetDefineVariable(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_VARIABLE)
+        {
+        if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+            {
+            tokens->head = tokens->head->right;
+            if (tokens->head->type == VARIABLE)
+                {
+                if (GetVariable(&(*node)->left, tokens) == Ok)
+                    {
+                    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_ASSIGMENT)
+                        {
+                        tokens->head = tokens->head->right;
+                        return GetExpression2(&(*node)->right, tokens);
+                        }
+                    else
+                        {
+                        Data_t zero = {.val = 0};
+                        return NewNode(&(*node)->right, VALUE, zero);
+                        }
+                    }
+                }
+            }
+        }
+
+    printf("Variable define error\n");
+    return SyntaxError;
+    }
+
+Error_t GetDefineArray(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_ARRAY)
+        {
+        if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+            {
+            tokens->head = tokens->head->right;
+            if (tokens->head->type == ARRAY)
+                {
+                if (GetArray(&(*node)->left, tokens) == Ok)
+                    {
+                    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_ASSIGMENT)
+                        {
+                        tokens->head = tokens->head->right;
+
+                        if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_SQUARE)
+                            {
+                            tokens->head = tokens->head->right;
+
+                            if (GetParametr(&(*node)->right, tokens) == Ok)
+                                {
+                                if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_SQUARE)
+                                    {
+                                    tokens->head = tokens->head->right;
+                                    return Ok;
+                                    }
+                                }
+                            }
+                        }
+                    else
+                        {
+                        Data_t next = {.id = OP_NEXT_PARAMETR};
+                        Data_t zero = {.val = 0};
+                        if (NewNode(&(*node)->right, OPERATION, next) == Ok &&
+                            NewNode(&(*node)->right->left, VALUE, zero))
+                            {
+                            return Ok;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    printf("Array define error\n");
+    return SyntaxError;
+    }
+
+Error_t GetDefineFunction(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_FUNCTION)
+        {
+        if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+            {
+            tokens->head = tokens->head->right;
+            if (tokens->head->type == FUNCTION)
+                {
+                if (NewNode(&(*node)->left, FUNCTION, tokens->head->data) == Ok)
+                    {
+                    tokens->head = tokens->head->right;
+                    if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_BRACKET)
+                        {
+                        tokens->head = tokens->head->right;
+
+                        if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACKET)
+                            {
+                            tokens->head = tokens->head->right;
+                            return GetBody(&(*node)->right, tokens);
+                            }
+
+                        if (GetFunctionParametr(&(*node)->left->right, tokens) == Ok)
+                            {
+                            if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACKET)
+                                {
+                                tokens->head = tokens->head->right;
+                                return GetBody(&(*node)->right, tokens);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    printf("Function define error\n");
+    return SyntaxError;
+    }
+
+Error_t GetFunctionParametr(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    Data_t parametr = {.id = OP_NEXT_PARAMETR};
+    if (NewNode(node, OPERATION, parametr) == Ok)
+        {
+        Error_t response = Ok;
+        if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_VARIABLE)
+            {
+            response = GetDefineVariable(&(*node)->left, tokens);
+            }
+        else if (tokens->head->type == OPERATION && tokens->head->data.id == OP_DEFINE_ARRAY)
+            {
+            response = GetDefineArray(&(*node)->left, tokens);
+            }
+        else
+            {
+            printf("Wrong function parametr\n");
+            response = SyntaxError;
+            }
+
+        if (response) return response;
+
+        if (tokens->head->type == OPERATION && tokens->head->data.id == OP_NEXT_PARAMETR)
+            {
+            tokens->head = tokens->head->right;
+            return GetFunctionParametr(&(*node)->right, tokens);
+            }
+        return Ok;
+        }
+
+    printf("Function parametr error\n");
+    return SyntaxError;
+    }
+
 Error_t GetIf(Node** node, List* tokens)
     {
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_IF)
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_IF)
         {
         if (NewNode(node, OPERATION, tokens->head->data) == Ok)
             {
             tokens->head = tokens->head->right;
             if (GetExpression2(&(*node)->left, tokens) == Ok)
                 {
-                if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == COLON)
+                if (tokens->head->type == PUNCTUATION && tokens->head->data.id == COLON)
                     {
                     tokens->head = tokens->head->right;
                     if (GetBody(&(*node)->right, tokens) == Ok)
                         {
-                        if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_ELSE)
+                        if (tokens->head->type == OPERATION && tokens->head->data.id == OP_ELSE)
                             {
                             Node* op_if = *node;
                             *node = nullptr;
@@ -542,18 +763,18 @@ Error_t GetElse(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_ELSE)
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_ELSE)
         {
         if (NewNode(node, OPERATION, tokens->head->data) == Ok)
             {
             tokens->head = tokens->head->right;
 
-            if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_IF)
+            if (tokens->head->type == OPERATION && tokens->head->data.id == OP_IF)
                 {
                 return GetIf(&(*node)->right, tokens);
                 }
 
-            if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == COLON)
+            if (tokens->head->type == PUNCTUATION && tokens->head->data.id == COLON)
                 {
                 tokens->head = tokens->head->right;
                 }
@@ -570,14 +791,14 @@ Error_t GetWhile(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_WHILE)
+    if (tokens->head->type == OPERATION && tokens->head->data.id == OP_WHILE)
         {
         if (NewNode(node, OPERATION, tokens->head->data) == Ok)
             {
             tokens->head = tokens->head->right;
             if (GetExpression2(&(*node)->left, tokens) == Ok)
                 {
-                if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == COLON)
+                if (tokens->head->type == PUNCTUATION && tokens->head->data.id == COLON)
                     {
                     tokens->head = tokens->head->right;
                     return GetBody(&(*node)->right, tokens);
@@ -598,21 +819,33 @@ Error_t GetAssigment(Node** node, List* tokens)
     if (tokens->head->type == VARIABLE)
         {
         tokens->head = tokens->head->right;
-        if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_ASSIGMENT)
+        if (tokens->head->type == OPERATION)
             {
-            if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+            switch (tokens->head->data.id)
                 {
-                if (NewNode(&(*node)->left, VARIABLE, tokens->head->left->data) == Ok)
+                case OP_ASSIGMENT:
+                case OP_ADD_ASSIGMENT:
+                case OP_SUB_ASSIGMENT:
+                case OP_MUL_ASSIGMENT:
+                case OP_DIV_ASSIGMENT:
+                case OP_POW_ASSIGMENT:
                     {
-                    tokens->head = tokens->head->right;
-                    return GetExpression2(&(*node)->right, tokens);
+                    if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+                        {
+                        if (NewNode(&(*node)->left, VARIABLE, tokens->head->left->data) == Ok)
+                            {
+                            tokens->head = tokens->head->right;
+                            return GetExpression2(&(*node)->right, tokens);
+                            }
+                        }
+                    printf("Assigment error\n");
+                    return SyntaxError;
                     }
+                default:
+                    tokens->head = tokens->head->left;
+                    return NotAssigment;
                 }
-            printf("Assigment error\n");
-            return SyntaxError;
             }
-
-        tokens->head = tokens->head->left;
         }
     return NotAssigment;
     }
@@ -622,12 +855,12 @@ Error_t GetBody(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == OPEN_BRACE)
+    if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_BRACE)
         {
         tokens->head = tokens->head->right;
         if (GetOperation(node, tokens) == Ok)
             {
-            if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACE)
+            if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACE)
                 {
                 tokens->head = tokens->head->right;
                 return Ok;
@@ -648,7 +881,7 @@ Error_t GetExpression2(Node** node, List* tokens)
         {
         if (tokens->head->type == OPERATION)
             {
-            switch (tokens->head->data.oper)
+            switch (tokens->head->data.id)
                 {
                 case OP_AND: case OP_OR:
                     {
@@ -681,7 +914,7 @@ Error_t GetExpression1(Node** node, List* tokens)
         {
         if (tokens->head->type == OPERATION)
             {
-            switch (tokens->head->data.oper)
+            switch (tokens->head->data.id)
                 {
                 case OP_EQUAL: case OP_NOT_EQUAL:
                 case OP_GREATER: case OP_LESS:
@@ -716,7 +949,7 @@ Error_t GetExpression0(Node** node, List* tokens)
         {
         if (tokens->head->type == OPERATION)
             {
-            switch (tokens->head->data.oper)
+            switch (tokens->head->data.id)
                 {
                 case OP_ADD: case OP_SUB:
                     {
@@ -749,7 +982,7 @@ Error_t GetTerm(Node** node, List* tokens)
         {
         if (tokens->head->type == OPERATION)
             {
-            switch (tokens->head->data.oper)
+            switch (tokens->head->data.id)
                 {
                 case OP_MUL: case OP_DIV: case OP_POW:
                     {
@@ -760,7 +993,7 @@ Error_t GetTerm(Node** node, List* tokens)
                         (*node)->left = unary;
 
                         tokens->head = tokens->head->right;
-                        return GetUnary(&(*node)->right, tokens);
+                        return GetTerm(&(*node)->right, tokens);
                         }
                     return SyntaxError;
                     }
@@ -780,11 +1013,12 @@ Error_t GetUnary(Node** node, List* tokens)
 
     if (tokens->head->type == OPERATION)
         {
-        switch (tokens->head->data.oper)
+        switch (tokens->head->data.id)
             {
             case OP_INPUT: case OP_OUTPUT:
             case OP_SIN: case OP_COS: case OP_SQRT:
-            case OP_LOG: case OP_EXP:
+            case OP_LOG: case OP_EXP: case OP_NOT:
+            case OP_INCREMENT: case OP_DECREMENT:
                 {
                 if (NewNode(node, OPERATION, tokens->head->data) == Ok)
                     {
@@ -808,7 +1042,7 @@ Error_t GetUnary(Node** node, List* tokens)
         return SyntaxError;
         }
 
-    if (tokens->head->type == OPERATION && tokens->head->data.oper == OP_NOT)
+    if  (tokens->head->type == OPERATION && tokens->head->data.id == OP_NOT)
         {
         Node* priority = *node;
         *node = nullptr;
@@ -830,12 +1064,12 @@ Error_t GetPriority(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == OPEN_BRACKET)
+    if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_BRACKET)
         {
         tokens->head = tokens->head->right;
         if (GetExpression2(node, tokens) == Ok)
             {
-            if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACKET)
+            if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACKET)
                 {
                 tokens->head = tokens->head->right;
                 return Ok;
@@ -858,6 +1092,7 @@ Error_t GetObject(Node** node, List* tokens)
         case VALUE:    return GetNumber(node, tokens);
         case VARIABLE: return GetVariable(node, tokens);
         case FUNCTION: return GetFunction(node, tokens);
+        case ARRAY:    return GetArray(node, tokens);
         }
 
     printf("Object error (get not object)\n");
@@ -869,12 +1104,12 @@ Error_t GetParametr(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    Data_t parametr = {.oper = OP_NEXT_PARAMETR};
-    if (NewNode(node, OP_NEXT_PARAMETR, parametr) == Ok)
+    Data_t parametr = {.id = OP_NEXT_PARAMETR};
+    if (NewNode(node, OPERATION, parametr) == Ok)
         {
         if (GetExpression2(&(*node)->left, tokens) == Ok)
             {
-            if (tokens->head->type == OPERATION && tokens->head->data.punc == OP_NEXT_PARAMETR)
+            if (tokens->head->type == OPERATION && tokens->head->data.id == OP_NEXT_PARAMETR)
                 {
                 tokens->head = tokens->head->right;
                 return GetParametr(&(*node)->right, tokens);
@@ -897,11 +1132,11 @@ Error_t GetFunction(Node** node, List* tokens)
         {
         tokens->head = tokens->head->right;
 
-        if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == OPEN_BRACKET)
+        if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_BRACKET)
             {
             tokens->head = tokens->head->right;
 
-            if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACKET)
+            if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACKET)
                 {
                 tokens->head = tokens->head->right;
                 return Ok;
@@ -909,7 +1144,7 @@ Error_t GetFunction(Node** node, List* tokens)
 
             if (GetParametr(&(*node)->right, tokens) == Ok)
                 {
-                if (tokens->head->type == PUNCTUATION && tokens->head->data.punc == CLOSE_BRACKET)
+                if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_BRACKET)
                     {
                     tokens->head = tokens->head->right;
                     return Ok;
@@ -919,6 +1154,34 @@ Error_t GetFunction(Node** node, List* tokens)
         }
 
     printf("Function error\n");
+    return SyntaxError;
+    }
+
+Error_t GetArray(Node** node, List* tokens)
+    {
+    assert(node);
+    assert(tokens);
+
+    if (NewNode(node, ARRAY, tokens->head->data) == Ok)
+        {
+        tokens->head = tokens->head->right;
+
+        if (tokens->head->type == PUNCTUATION && tokens->head->data.id == OPEN_SQUARE)
+            {
+            tokens->head = tokens->head->right;
+
+            if (GetExpression0(&(*node)->right, tokens) == Ok)
+                {
+                if (tokens->head->type == PUNCTUATION && tokens->head->data.id == CLOSE_SQUARE)
+                    {
+                    tokens->head = tokens->head->right;
+                    return Ok;
+                    }
+                }
+            }
+        }
+
+    printf("Array error\n");
     return SyntaxError;
     }
 
@@ -950,16 +1213,4 @@ Error_t GetNumber(Node** node, List* tokens)
 
     printf("Number error\n");
     return SyntaxError;
-    }
-
-static void syn_assert(int expr, Compiler *cmp)
-    {
-    if (!expr) syntax_error(cmp);
-    }
-
-static void syntax_error(Compiler *cmp)
-    {
-    printf("Syntax error\n");
-    cmp->error = SyntaxError;
-    exit(1);
     }

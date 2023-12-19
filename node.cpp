@@ -28,11 +28,8 @@ Error_t NewNode(Node** node, const int type, const Data_t data)
         case VALUE:
             new_node->data.val  = data.val;
             break;
-        case VARIABLE:
-            new_node->data.var  = data.var;
-            break;
-        case OPERATION:
-            new_node->data.oper = data.oper;
+        default:
+            new_node->data.id  = data.id;
             break;
         }
 
@@ -73,11 +70,8 @@ Error_t EditNode(Node* node, const int type, const Data_t data)
         case VALUE:
             node->data.val  = data.val;
             break;
-        case VARIABLE:
-            node->data.var  = data.var;
-            break;
-        case OPERATION:
-            node->data.oper = data.oper;
+        default:
+            node->data.id   = data.id;
             break;
         }
 
