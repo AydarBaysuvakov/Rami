@@ -67,7 +67,7 @@ Error_t Frontend(const char* file_from, const char* file_to)
 
     if (GetGrammar(&cmp) != Ok)
         {
-        //TreeDump(&cmp.tree, 0);
+        TreeDump(&cmp.tree, 0);
         CompilerDtor(&cmp);
         return SyntaxError;
         }
@@ -147,6 +147,10 @@ Error_t CompilerCtor(Compiler* cmp, const char* filename)
         cmp->name_table[i].name = nullptr;
         }
 
+    cmp->arr_count = 0;
+    cmp->var_count = 0;
+    cmp->func_count = 0;
+
     cmp->error      = Ok;
 
     ListCtor(&cmp->tokens);
@@ -163,13 +167,16 @@ Error_t CompilerDtor(Compiler* cmp)
     cmp->size       = 0;
     cmp->error      = Ok;
 
-
     free(cmp->str);
     for (int i = 0; i < cmp->name_count; i++)
         {
         if (cmp->name_table[i].name) free(cmp->name_table[i].name);
         }
     free(cmp->name_table);
+
+    cmp->name_count = 0;
+    cmp->var_count = 0;
+    cmp->func_count = 0;
 
     ListDtor(&cmp->tokens);
     TreeDtor(&cmp->tree);
@@ -302,7 +309,7 @@ static void ReadKeyWord(Compiler* cmp, Node* node)
                 cmp->pos -= strlen(cmp->name_table[index].name);
                 continue;
                 }
-            Data_t data = {.id = index};
+            Data_t data = {.id = cmp->name_table[index].index};
             ListInsert(node, cmp->name_table[index].type, data);
             return;
             }
@@ -353,7 +360,8 @@ static void NewKeyWord(Compiler* cmp, Node* node, int index)
         {
         if (node->type == OPERATION && node->data.id == OP_DEFINE_FUNCTION)
             {
-            cmp->name_table[index].type = FUNCTION;
+            cmp->name_table[index].index = cmp->func_count++;
+            cmp->name_table[index].type  = FUNCTION;
             }
         else
             {
@@ -366,6 +374,7 @@ static void NewKeyWord(Compiler* cmp, Node* node, int index)
         {
         if (node->type == OPERATION && node->data.id == OP_DEFINE_ARRAY)
             {
+            cmp->name_table[index].index = cmp->arr_count++;
             cmp->name_table[index].type = ARRAY;
             }
         else
@@ -379,6 +388,7 @@ static void NewKeyWord(Compiler* cmp, Node* node, int index)
         {
         if (node->type == OPERATION && node->data.id == OP_DEFINE_VARIABLE)
             {
+            cmp->name_table[index].index = cmp->var_count++;
             cmp->name_table[index].type = VARIABLE;
             }
         else
@@ -389,7 +399,7 @@ static void NewKeyWord(Compiler* cmp, Node* node, int index)
             }
         }
 
-    Data_t data = {.id = index};
+    Data_t data = {.id = cmp->name_table[index].index};
     ListInsert(node, cmp->name_table[index].type, data);
 
     cmp->pos += word_length;
@@ -816,35 +826,38 @@ Error_t GetAssigment(Node** node, List* tokens)
     assert(node);
     assert(tokens);
 
-    if (tokens->head->type == VARIABLE)
+    if (tokens->head->type == VARIABLE || tokens->head->type == ARRAY)
         {
-        tokens->head = tokens->head->right;
-        if (tokens->head->type == OPERATION)
+        Node* var = nullptr;
+        if (GetObject(&var, tokens) == Ok)
             {
-            switch (tokens->head->data.id)
+            if (tokens->head->type == OPERATION)
                 {
-                case OP_ASSIGMENT:
-                case OP_ADD_ASSIGMENT:
-                case OP_SUB_ASSIGMENT:
-                case OP_MUL_ASSIGMENT:
-                case OP_DIV_ASSIGMENT:
-                case OP_POW_ASSIGMENT:
+                switch (tokens->head->data.id)
                     {
-                    if (NewNode(node, OPERATION, tokens->head->data) == Ok)
+                    case OP_ASSIGMENT:
+                    case OP_ADD_ASSIGMENT:
+                    case OP_SUB_ASSIGMENT:
+                    case OP_MUL_ASSIGMENT:
+                    case OP_DIV_ASSIGMENT:
+                    case OP_POW_ASSIGMENT:
                         {
-                        if (NewNode(&(*node)->left, VARIABLE, tokens->head->left->data) == Ok)
+                        if (NewNode(node, OPERATION, tokens->head->data) == Ok)
                             {
                             tokens->head = tokens->head->right;
+                            (*node)->left = var;
                             return GetExpression2(&(*node)->right, tokens);
                             }
+                        printf("Assigment error\n");
+                        return SyntaxError;
                         }
-                    printf("Assigment error\n");
-                    return SyntaxError;
                     }
-                default:
-                    tokens->head = tokens->head->left;
-                    return NotAssigment;
                 }
+            }
+        free(var);
+        while (tokens->head->left->data.id != OP_NEXT_COMMAND && tokens->head->left->data.id != NULL_TERMINATOR)
+            {
+            tokens->head = tokens->head->left;
             }
         }
     return NotAssigment;
@@ -1095,7 +1108,7 @@ Error_t GetObject(Node** node, List* tokens)
         case ARRAY:    return GetArray(node, tokens);
         }
 
-    printf("Object error (get not object)\n");
+    printf("Object error (get not object) get %d, %d\n", tokens->head->type, tokens->head->data.id);
     return SyntaxError;
     }
 

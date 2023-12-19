@@ -41,6 +41,22 @@ DEFINE_OPERATION (OP_SUB,           {
                                     fprintf(fp, "sub\n");
                                     })
 
+DEFINE_OPERATION (OP_INCREMENT,     {
+                                    fprintf(fp, "push [%d]\n", node->right->data.id);
+                                    fprintf(fp, "push 1\n");
+                                    fprintf(fp, "add\n");
+                                    fprintf(fp, "pop [%d]\n", node->right->data.id);
+                                    fprintf(fp, "push [%d]\n", node->right->data.id);
+                                    })
+
+DEFINE_OPERATION (OP_DECREMENT,     {
+                                    fprintf(fp, "push [%d]\n", node->right->data.id);
+                                    fprintf(fp, "push 1\n");
+                                    fprintf(fp, "sub\n");
+                                    fprintf(fp, "pop [%d]\n", node->right->data.id);
+                                    fprintf(fp, "push [%d]\n", node->right->data.id);
+                                    })
+
 DEFINE_OPERATION (OP_MUL,           {
                                     WriteBothNodes()
                                     fprintf(fp, "mul\n");
@@ -90,7 +106,12 @@ DEFINE_OPERATION (OP_INPUT,         {
                                     if (node->right->type == VARIABLE)
                                         {
                                         fprintf(fp, "in\n");
-                                        fprintf(fp, "pop [%d]\n", node->right->data.var);
+                                        fprintf(fp, "pop [%d]\n", node->right->data.id);
+                                        }
+                                    else if (node->right->type == ARRAY)
+                                        {
+                                        fprintf(fp, "in\n");
+                                        fprintf(fp, "pop [%d]\n", node->right->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + (int) node->right->right->data.val);
                                         }
                                     else
                                         {
@@ -105,5 +126,6 @@ DEFINE_OPERATION (OP_OUTPUT,        {
                                     })
 
 DEFINE_OPERATION (OP_RETURN,        {
+                                    if (node->right) WriteEquation(node->right, fp);
                                     fprintf(fp, "ret\n");
                                     })

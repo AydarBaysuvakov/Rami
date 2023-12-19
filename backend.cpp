@@ -120,7 +120,7 @@ Error_t ReadTree(Node** node, FILE* fp)
     fscanf(fp, "%d", &type);
 
     if  (type == VALUE)  fscanf(fp, "%lf", &data.val);
-    else                 fscanf(fp, "%d", &data.var);
+    else                 fscanf(fp, "%d", &data.id);
 
     if (NewNode(node, type, data) == AllocationError)
         {
@@ -175,26 +175,49 @@ Error_t WriteCommand(Node* node, FILE* fp)
 
     fprintf(fp, "\n");
 
-    if (node->type == OPERATION && node->data.oper == OP_ASSIGMENT)
-        {
-        return WriteAssigment(node, fp);
-        }
-    if (node->type == OPERATION && node->data.oper == OP_WHILE)
-        {
-        while_number += 1;
-        return WriteWhile(node, fp);
-        }
-    if (node->type == OPERATION && (node->data.oper == OP_IF || node->data.oper == OP_ELSE))
-        {
-        if_number += 1;
-        Error_t response = WriteIf(node, fp, 0);
-        fprintf(fp, "end_if_%d:\n", if_number);
-        return response;
-        }
-    if (node->type == OPERATION && node->data.oper == OP_NEXT_COMMAND)
-        {
-        return WriteBody(node, fp);
-        }
+    if (node->type == OPERATION)
+        switch (node->data.id)
+            {
+            case OP_ASSIGMENT:
+            case OP_ADD_ASSIGMENT:
+            case OP_SUB_ASSIGMENT:
+            case OP_MUL_ASSIGMENT:
+            case OP_DIV_ASSIGMENT:
+            case OP_POW_ASSIGMENT:
+                {
+                return WriteAssigment(node, fp);
+                }
+            case OP_WHILE:
+                {
+                while_number += 1;
+                WriteWhile(node, fp);
+                fprintf(fp, "end_while_%d:\n", while_number);
+                return Ok;
+                }
+            case OP_IF: case OP_ELSE:
+                {
+                if_number += 1;
+                WriteIf(node, fp, 0);
+                fprintf(fp, "end_if_%d:\n", if_number);
+                return Ok;
+                }
+            case OP_NEXT_COMMAND:
+                {
+                return WriteBody(node, fp);
+                }
+            case OP_DEFINE_VARIABLE:
+                {
+                return WriteDefineVariable(node, fp);
+                }
+            case OP_DEFINE_FUNCTION:
+                {
+                return WriteDefineFunction(node, fp);
+                }
+            case OP_DEFINE_ARRAY:
+                {
+                return WriteDefineArray(node, fp);
+                }
+            }
 
     return WriteEquation(node, fp);
     }
@@ -209,26 +232,51 @@ Error_t WriteEquation(Node* node, FILE* fp)
     switch (node->type)
         {
         case VALUE:
+            {
             fprintf(fp, "push %f\n", node->data.val);
             break;
+            }
         case VARIABLE:
-            fprintf(fp, "push [%d]\n", node->data.var);
+            {
+            fprintf(fp, "push [%d]\n", node->data.id);
             break;
+            }
         case FUNCTION:
-            fprintf(fp, "call func_%d\n", node->data.func);
+            {
+            Node* parametr = node->right;
+            int   param_number = 0;
+            while (parametr)
+                {
+                fprintf(fp, "push [%d]\n", parametr->left->data.id);
+                fprintf(fp, "pop reg%d\n", param_number);
+
+                parametr = parametr->right;
+                param_number += 1;
+                }
+            fprintf(fp, "call func_%d\n", node->data.id);
             break;
+            }
+        case ARRAY:
+            {
+            fprintf(fp, "push [%d]\n", node->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + (int) node->right->data.val);
+            break;
+            }
         case OPERATION:
-            switch (node->data.oper)
+            {
+            switch (node->data.id)
                 {
                 #include "operations.h"
                 default:
-                    printf("Syntax error: wrong operation\n");
+                    printf("Syntax error: wrong operation %d %d\n", node->type, node->data.id);
                     return SyntaxError;
                 }
             break;
+            }
         default:
+            {
             printf("Syntax error: wrong argument type\n");
             return SyntaxError;
+            }
         }
 
     #undef DEFINE_OPERATION
@@ -241,8 +289,98 @@ Error_t WriteAssigment(Node* node, FILE* fp)
     assert(node);
     assert(fp);
 
+    int index = 0;
+
+    if (node->left->type == VALUE)
+        {
+        index = node->left->data.id;
+        }
+    else if (node->left->type == ARRAY)
+        {
+        index = node->left->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT;
+        }
+
+    fprintf(fp, "push [%d]\n", index);
     WriteEquation(node->right, fp);
-    fprintf(fp, "pop [%d]\n", node->left->data.var);
+    switch (node->data.id)
+        {
+        case OP_ASSIGMENT:
+            break;
+        case OP_ADD_ASSIGMENT:
+            fprintf(fp, "add\n");
+            break;
+        case OP_SUB_ASSIGMENT:
+            fprintf(fp, "sub\n");
+            break;
+        case OP_MUL_ASSIGMENT:
+            fprintf(fp, "mul\n");
+            break;
+        case OP_DIV_ASSIGMENT:
+            fprintf(fp, "div\n");
+            break;
+        case OP_POW_ASSIGMENT:
+            fprintf(fp, "pow\n");
+            break;
+        }
+    fprintf(fp, "pop [%d]\n", index);
+
+    return Ok;
+    }
+
+Error_t WriteDefineVariable(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    WriteEquation(node->right, fp);
+    fprintf(fp, "pop [%d]\n", node->left->data.id);
+
+    return Ok;
+    }
+
+Error_t WriteDefineFunction(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    fprintf(fp, "call func_guard_%d\n", node->left->data.id);
+
+    fprintf(fp, "func_%d:\n", node->left->data.id);
+
+    Node* parametr = node->left->right;
+    int   param_number = 0;
+    while (parametr)
+        {
+        fprintf(fp, "push reg%d\n", param_number);
+        fprintf(fp, "pop [%d]\n", parametr->left->left->data.id);
+
+        parametr = parametr->right;
+        param_number += 1;
+        }
+
+    WriteBody(node->right, fp);
+    fprintf(fp, "ret\n");
+
+    fprintf(fp, "func_guard_%d:\n", node->left->data.id);
+
+    return Ok;
+    }
+
+Error_t WriteDefineArray(Node* node, FILE* fp)
+    {
+    assert(node);
+    assert(fp);
+
+    Node* parametr = node->right;
+    int   param_number = 0;
+    while (parametr && param_number < node->left->right->data.val)
+        {
+        WriteEquation(parametr->left, fp);
+        fprintf(fp, "pop [%d]\n", node->left->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + param_number);
+
+        parametr = parametr->right;
+        param_number += 1;
+        }
 
     return Ok;
     }
@@ -276,7 +414,6 @@ Error_t WriteWhile(Node* node, FILE* fp)
     fprintf(fp, "je end_while_%d", while_number);
     WriteBody(node->right, fp);
     fprintf(fp, "jmp while_%d\n", while_number);
-    fprintf(fp, "end_while_%d:\n", while_number);
 
     return Ok;
     }
@@ -286,7 +423,7 @@ Error_t WriteIf(Node* node, FILE* fp, int order)
     assert(node);
     assert(fp);
 
-    if (node->type == OPERATION && node->data.oper == OP_IF)
+    if (node->type == OPERATION && node->data.id == OP_IF)
         {
         WriteEquation(node->left, fp);
         fprintf(fp, "push 0\n");
@@ -294,7 +431,7 @@ Error_t WriteIf(Node* node, FILE* fp, int order)
         WriteBody(node->right, fp);
         fprintf(fp, "jmp end_if_%d\n\n", if_number);
         }
-    else if (node->type == OPERATION && node->data.oper == OP_ELSE)
+    else if (node->type == OPERATION && node->data.id == OP_ELSE)
         {
         Node* if_node = node->left;
         WriteEquation(if_node->left, fp);

@@ -9,8 +9,7 @@ struct Object
     {
     int             type;
     char*           name;
-    int             size        = 0;
-    int             parametrs   = 0;
+    int             index;
     };
 
 struct Compiler
@@ -22,6 +21,9 @@ struct Compiler
     Tree        tree;
     Object*     name_table;
     int         name_count;
+    int         var_count;
+    int         func_count;
+    int         arr_count;
     Error_t     error;
     };
 
