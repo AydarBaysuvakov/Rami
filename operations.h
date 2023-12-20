@@ -107,11 +107,13 @@ DEFINE_OPERATION (OP_INPUT,         {
                                         {
                                         fprintf(fp, "in\n");
                                         fprintf(fp, "pop [%d]\n", node->right->data.id);
+                                        fprintf(fp, "push [%d]\n", node->right->data.id);
                                         }
                                     else if (node->right->type == ARRAY)
                                         {
                                         fprintf(fp, "in\n");
                                         fprintf(fp, "pop [%d]\n", node->right->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + (int) node->right->right->data.val);
+                                        fprintf(fp, "push [%d]\n", node->right->data.id);
                                         }
                                     else
                                         {
@@ -126,6 +128,15 @@ DEFINE_OPERATION (OP_OUTPUT,        {
                                     })
 
 DEFINE_OPERATION (OP_RETURN,        {
-                                    if (node->right) WriteEquation(node->right, fp);
+                                    if (node->right)
+                                        {
+                                        WriteEquation(node->right, fp);
+                                        fprintf(fp, "pop reg0\n");
+                                        }
+                                    else
+                                        {
+                                        fprintf(fp, "push 0\n");
+                                        fprintf(fp, "pop reg0\n");
+                                        }
                                     fprintf(fp, "ret\n");
                                     })

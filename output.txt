@@ -1,0 +1,125 @@
+
+jmp func_guard_0
+func_0:
+push reg0
+pop [0]
+
+push [0]
+push [0]
+mul
+pop reg0
+ret
+pop trash
+ret
+func_guard_0:
+
+jmp func_guard_1
+func_1:
+push reg0
+pop [1]
+push reg1
+pop [2]
+push reg2
+pop [3]
+
+push [1]
+out
+pop trash
+
+push [2]
+out
+pop trash
+
+push [3]
+out
+pop trash
+
+push [2]
+pop reg0
+call func_0
+push reg0
+push 4.000000
+push [1]
+push [3]
+mul
+mul
+sub
+pop [4]
+
+push [4]
+out
+pop trash
+
+push [4]
+pop reg0
+ret
+pop trash
+ret
+func_guard_1:
+
+push 1.000000
+pop reg0
+push 2.000000
+pop reg1
+push 3.000000
+pop reg2
+call func_1
+push reg0
+out
+pop trash
+
+push 0.000000
+pop [800]
+
+push 0.000000
+pop [5]
+
+while_1:
+push [5]
+push 10.000000
+lt
+push 0
+je end_while_1
+push [5]
+push 1
+add
+pop [5]
+push [5]
+pop trash
+
+push [5]
+out
+pop trash
+
+push [800]
+push [5]
+push 5.000000
+add
+pop [800]
+pop trash
+jmp while_1
+end_while_1:
+
+push [5]
+push 0.000000
+pop [5]
+pop trash
+
+while_2:
+push [5]
+push 10.000000
+lt
+push 0
+je end_while_2
+push [5]
+push 1
+add
+pop [5]
+push [5]
+pop trash
+
+push [800]
+out
+pop trash
+jmp while_2
+end_while_2:

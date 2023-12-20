@@ -33,7 +33,7 @@ logfiles.o: logfiles.cpp
 	g++ -c logfiles.cpp
 
 clean:
-	rm -rf *.o stack debug
+	rm -rf *.o
 
 clean_o:
 	rm -rf *.o

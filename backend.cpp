@@ -219,7 +219,9 @@ Error_t WriteCommand(Node* node, FILE* fp)
                 }
             }
 
-    return WriteEquation(node, fp);
+    Error_t state = WriteEquation(node, fp);
+    fprintf(fp, "pop trash\n");
+    return state;
     }
 
 Error_t WriteEquation(Node* node, FILE* fp)
@@ -247,13 +249,25 @@ Error_t WriteEquation(Node* node, FILE* fp)
             int   param_number = 0;
             while (parametr)
                 {
-                fprintf(fp, "push [%d]\n", parametr->left->data.id);
+                switch (parametr->left->type)
+                    {
+                    case VALUE:
+                        fprintf(fp, "push %f\n", parametr->left->data.val);
+                        break;
+                    case VARIABLE:
+                        fprintf(fp, "push [%d]\n", parametr->left->data.id);
+                        break;
+                    case ARRAY:
+                        fprintf(fp, "push [%d]\n", node->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + (int) node->right->data.val);
+                        break;
+                    }
                 fprintf(fp, "pop reg%d\n", param_number);
 
                 parametr = parametr->right;
                 param_number += 1;
                 }
             fprintf(fp, "call func_%d\n", node->data.id);
+            fprintf(fp, "push reg0\n");
             break;
             }
         case ARRAY:
@@ -291,13 +305,13 @@ Error_t WriteAssigment(Node* node, FILE* fp)
 
     int index = 0;
 
-    if (node->left->type == VALUE)
+    if (node->left->type == VARIABLE)
         {
         index = node->left->data.id;
         }
     else if (node->left->type == ARRAY)
         {
-        index = node->left->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT;
+        index = node->left->data.id * ARRAY_MAX_SIZE + ARRAY_SEGMENT + (int) node->left->right->data.val;
         }
 
     fprintf(fp, "push [%d]\n", index);
@@ -305,7 +319,9 @@ Error_t WriteAssigment(Node* node, FILE* fp)
     switch (node->data.id)
         {
         case OP_ASSIGMENT:
-            break;
+            fprintf(fp, "pop [%d]\n", index);
+            fprintf(fp, "pop trash\n");
+            return Ok;
         case OP_ADD_ASSIGMENT:
             fprintf(fp, "add\n");
             break;
@@ -343,7 +359,7 @@ Error_t WriteDefineFunction(Node* node, FILE* fp)
     assert(node);
     assert(fp);
 
-    fprintf(fp, "call func_guard_%d\n", node->left->data.id);
+    fprintf(fp, "jmp func_guard_%d\n", node->left->data.id);
 
     fprintf(fp, "func_%d:\n", node->left->data.id);
 

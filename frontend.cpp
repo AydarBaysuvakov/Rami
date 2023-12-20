@@ -210,7 +210,7 @@ Error_t TokenParsing(Compiler* cmp)
 
     Node* node = cmp->tokens.head;
 
-    while (cmp->str[cmp->pos] != '\0')
+    while (cmp->pos < cmp->size)
         {
         if (isspace(cmp->str[cmp->pos])) cmp->pos++;
         else if (IsNumber(cmp->str, cmp->pos))
@@ -421,7 +421,8 @@ static void ReadOperation(Compiler* cmp, Node* node)
             }
         }
 
-    printf("Syntax error in pos %d: %s\n", cmp->pos, cmp->str + cmp->pos);
+    //printf("Syntax error in pos %d: %s\n", cmp->pos, cmp->str + cmp->pos);
+    printf("Syntax error in pos %d %d\n", cmp->pos, cmp->size);
     cmp->error = SyntaxError;
     return;
     }
@@ -635,7 +636,7 @@ Error_t GetDefineArray(Node** node, List* tokens)
                         Data_t next = {.id = OP_NEXT_PARAMETR};
                         Data_t zero = {.val = 0};
                         if (NewNode(&(*node)->right, OPERATION, next) == Ok &&
-                            NewNode(&(*node)->right->left, VALUE, zero))
+                            NewNode(&(*node)->right->left, VALUE, zero) == Ok)
                             {
                             return Ok;
                             }
